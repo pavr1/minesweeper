@@ -2,7 +2,6 @@ package gate
 
 import (
 	"minesweeper/dbhandler"
-	"minesweeper/models"
 )
 
 var gate *Gate
@@ -25,12 +24,12 @@ func Start() error {
 	return nil
 }
 
-func CreateUser(name, lastName string) error {
-	u, err := models.CreateUser(name, lastName)
+// func CreateUser(name, lastName string) error {
+// 	_, err := models.CreateUser(name, lastName)
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	gate.DbHandler.
-}
+// 	//gate.DbHandler.
+// }
