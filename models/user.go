@@ -13,16 +13,7 @@ type User struct {
 	LastName    string
 	Password    string
 	CreatedDate time.Time
-}
-
-func CreateUser(name, lastName, password string) (*User, error) {
-	user := User{
-		Name:     name,
-		LastName: lastName,
-		Password: password,
-	}
-
-	return &user, nil
+	Message     string
 }
 
 func (u *User) Insert(db *dbhandler.DbHandler) error {

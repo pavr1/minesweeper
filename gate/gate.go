@@ -24,26 +24,20 @@ func Start() (*Gate, error) {
 	return gate, nil
 }
 
-func (g *Gate) CreateUser(name, lastName, password string) error {
-	if name == "" {
+func (g *Gate) CreateUser(user models.User) error {
+	if user.Name == "" {
 		return fmt.Errorf("User name required")
 	}
 
-	if lastName == "" {
+	if user.LastName == "" {
 		return fmt.Errorf("User last name required")
 	}
 
-	if password == "" {
+	if user.Password == "" {
 		return fmt.Errorf("Password required")
 	}
 
-	u, err := models.CreateUser(name, lastName, password)
-
-	if err != nil {
-		return err
-	}
-
-	err = u.Insert(g.DbHandler)
+	err := user.Insert(g.DbHandler)
 
 	if err != nil {
 		return err

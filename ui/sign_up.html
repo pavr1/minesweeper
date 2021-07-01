@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <title>Sign Up</title>
+    </head>
+    <body>
+        <h1>Sign Up</h1>
+        <form action="./signup" method="Post">
+            <table border="0">
+                <tr>
+                    <td>Name:</td>
+                    <td><input type="text" id="name" name="name" placeholder="Name" value="{{.Name}}"></input></td>
+                </tr>
+                <tr>
+                    <td>Last Name:</td>
+                    <td><input type="text" id="lastName" name="lastName" placeholder="Last Name"></input></td>
+                </tr>
+                <tr>
+                    <td>Password:</td>
+                    <td><input type="password" id="password" name="password" placeholder="Password"></input></td>
+                </tr>
+                <tr>
+                    <td><button onclick="window.location.href = '/'"><< Back</button></td>
+                    <td><input type="submit"></input></td>
+                </tr>
+            </table>
+            <h1>{{.Message}}</h1>
+        </form>
+    </body>
+</html>
