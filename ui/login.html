@@ -1,0 +1,25 @@
+<html>
+    <head>
+        <title>Login</title>
+    </head>
+    <body>
+        <h1>Login</h1>
+        <form action="./login" method="Post">
+            <table border="0">
+                <tr>
+                    <td>Name:</td>
+                    <td><input type="text" id="name" name="name" placeholder="Name" value="{{.Name}}"></input></td>
+                </tr>
+                <tr>
+                    <td>Password:</td>
+                    <td><input type="password" id="password" name="password" placeholder="Password" value="{{.Password}}"></input></td>
+                </tr>
+                <tr>
+                    <td><a href="/"><< Back</a></td>
+                    <td><input type="submit"></input></td>
+                </tr>
+            </table>
+            <h1>{{.Message}}</h1>
+        </form>
+    </body>
+</html>

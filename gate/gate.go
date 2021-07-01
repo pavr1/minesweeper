@@ -45,3 +45,35 @@ func (g *Gate) CreateUser(user models.User) error {
 
 	return nil
 }
+
+func (g *Gate) ValidateLogin(user models.User) (bool, error) {
+	if user.Name == "" {
+		return false, fmt.Errorf("User name required")
+	}
+
+	if user.Password == "" {
+		return false, fmt.Errorf("Password required")
+	}
+
+	valid, err := user.ValidateUser(g.DbHandler)
+
+	if err != nil {
+		return false, err
+	}
+
+	return valid, nil
+}
+
+func (g *Gate) CreateGame(game models.Game) (int, error) {
+	if game.UserId == 0 {
+		return 0, fmt.Errorf("User id required")
+	}
+
+	err := game.Create(g.DbHandler)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return -1, nil
+}

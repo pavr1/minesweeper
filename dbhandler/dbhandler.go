@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 )
@@ -17,6 +18,15 @@ var databasename = "minesweeper"
 
 type DbHandler struct {
 	Db *sql.DB
+}
+
+type DbUser struct {
+	UserId      string
+	Name        string
+	LastName    string
+	Password    string
+	CreatedDate time.Time
+	Message     string
 }
 
 func GetInstance() (*DbHandler, error) {
@@ -70,11 +80,75 @@ func (h *DbHandler) Execute(statement string, args []string) error {
 		params[i] = args[i]
 	}
 
+	//set restult for Id to be returned
 	_, err = h.Db.Exec(statement, params...)
 
 	if err != nil {
 		return fmt.Errorf("Error executing statement: %s" + err.Error())
 	}
 
+	// if result != nil {
+
+	// }
+
 	return nil
+}
+
+func (h *DbHandler) Select(statement, structType string, args []string) ([]interface{}, error) {
+	ctx := context.Background()
+
+	params := make([]interface{}, len(args))
+	for i := range args {
+		params[i] = args[i]
+	}
+
+	rows, err := h.Db.QueryContext(ctx, statement, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []interface{}
+	defer rows.Close()
+
+	switch structType {
+	case "User":
+		var users = []DbUser{}
+
+		for rows.Next() {
+			var userId string
+			var name string
+			var lastName string
+			var password string
+			var createdDate time.Time
+
+			rows.Scan(&userId, &name, &lastName, &password, &createdDate)
+
+			users = append(users, DbUser{
+				UserId:      userId,
+				Name:        name,
+				LastName:    lastName,
+				Password:    password,
+				CreatedDate: createdDate,
+			})
+		}
+
+		result = make([]interface{}, len(users))
+		for i, v := range users {
+			result[i] = v
+		}
+
+		return result, nil
+	case "Game":
+	case "Spot":
+	}
+
+	// If the database is being written to ensure to check for Close
+	// errors that may be returned from the driver. The query may
+	// encounter an auto-commit error and be forced to rollback changes.
+	err = rows.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
