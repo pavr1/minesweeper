@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [minesweeper]    Script Date: 6/30/2021 01:53:53 PM ******/
+/****** Object:  Database [minesweeper]    Script Date: 6/30/2021 06:25:46 PM ******/
 CREATE DATABASE [minesweeper]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -80,45 +80,53 @@ ALTER DATABASE [minesweeper] SET QUERY_STORE = OFF
 GO
 USE [minesweeper]
 GO
-/****** Object:  Table [dbo].[Game]    Script Date: 6/30/2021 01:53:53 PM ******/
+/****** Object:  User [minesweeper]    Script Date: 6/30/2021 06:25:46 PM ******/
+CREATE USER [minesweeper] FOR LOGIN [minesweeper] WITH DEFAULT_SCHEMA=[dbo]
+GO
+/****** Object:  Table [dbo].[User]    Script Date: 6/30/2021 06:25:46 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[User](
+	[UserId] [int] IDENTITY(1,1) PRIMARY KEY,
+	[UserName] [varchar](50) NOT NULL,
+	[UserLastName] [varchar](50) NOT NULL,
+    [Password] [varchar](50) NOT NULL,
+	[CreatedDate] [datetime] NOT NULL
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Game]    Script Date: 6/30/2021 06:25:46 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[Game](
-	[GameId] [uniqueidentifier] NOT NULL,
-	[UserId] [uniqueidentifier] NOT NULL,
+	[GameId] [int] IDENTITY(1,1) PRIMARY KEY,
+	[UserId] [int] NOT NULL,
 	[CreatedDate] [datetime] NOT NULL,
 	[TimeConsumed] [float] NOT NULL,
 	[Status] [varbinary](20) NOT NULL
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Spot]    Script Date: 6/30/2021 01:53:53 PM ******/
+ALTER TABLE [dbo].[Game]
+ADD FOREIGN KEY (UserId) REFERENCES [dbo].[User](UserId);
+/****** Object:  Table [dbo].[Spot]    Script Date: 6/30/2021 06:25:46 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[Spot](
-	[SpotId] [uniqueidentifier] NOT NULL,
-	[GameId] [uniqueidentifier] NOT NULL,
+	[SpotId] [int] IDENTITY(1,1) PRIMARY KEY,
+	[GameId] [int] NOT NULL,
 	[Value] [varchar](1) NULL,
 	[X] [int] NOT NULL,
 	[Y] [int] NOT NULL,
 	[NearSpots] [varchar](max) NOT NULL,
 	[Status] [varchar](20) NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[User]    Script Date: 6/30/2021 01:53:53 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[User](
-	[UserId] [uniqueidentifier] NOT NULL,
-	[UserName] [varchar](50) NOT NULL,
-	[UserLastName] [varbinary](50) NOT NULL,
-	[CreatedDate] [datetime] NOT NULL
-) ON [PRIMARY]
+ALTER TABLE [dbo].[Spot]
+ADD FOREIGN KEY (GameId) REFERENCES Game(GameId);
 GO
 USE [master]
 GO

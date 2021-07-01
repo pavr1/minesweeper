@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // Replace with your own connection parameters
-var server = "localhost"
-var port = 1433
-var user = "sa"
-var password = "your_password"
+var server = "127.0.0.1"
+var port = 1434
+var user = "minesweeper"
+var password = "minesweeper"
+var databasename = "minesweeper"
 
 type DbHandler struct {
 	Db *sql.DB
@@ -31,7 +34,7 @@ func GetInstance() (*DbHandler, error) {
 }
 
 func createDatabase() (*sql.DB, error) {
-	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d", server, user, password, port)
+	connString := fmt.Sprintf("server=%s;database=%s;port=%d;Trusted_Connection=true", server, databasename, port)
 
 	db, err := sql.Open("sqlserver", connString)
 
@@ -42,7 +45,7 @@ func createDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
-func (h *DbHandler) Execute(statement string, args []sql.NamedArg) error {
+func (h *DbHandler) Execute(statement string, args []string) error {
 	ctx := context.Background()
 	var err error
 	var db *sql.DB
@@ -62,26 +65,16 @@ func (h *DbHandler) Execute(statement string, args []sql.NamedArg) error {
 		return fmt.Errorf("Error pinging db server: %s" + err.Error())
 	}
 
-	//tsql := "INSERT INTO TestSchema.Employees (Name, Location) VALUES (@Name, @Location); select convert(bigint, SCOPE_IDENTITY());"
-
-	stmt, err := db.Prepare(statement)
-	if err != nil {
-		return fmt.Errorf("Error preparing statement: %s" + err.Error())
+	params := make([]interface{}, len(args))
+	for i := range args {
+		params[i] = args[i]
 	}
-	defer stmt.Close()
 
-	//args[0] = sql.Named("test", "test")
+	_, err = h.Db.Exec(statement, params...)
 
-	/*row := */
-	stmt.QueryRowContext(
-		ctx, args)
-	// sql.Named("Name", name),
-	// sql.Named("Location", location))
-	// var newID int64
-	// err = row.Scan(&newID)
-	// if err != nil {
-	// 	return err
-	// }
+	if err != nil {
+		return fmt.Errorf("Error executing statement: %s" + err.Error())
+	}
 
 	return nil
 }
