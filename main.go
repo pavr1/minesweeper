@@ -6,6 +6,7 @@ import (
 	"minesweeper/gate"
 	"minesweeper/models"
 	"net/http"
+	"strconv"
 	"text/template"
 )
 
@@ -86,14 +87,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 			Password: password,
 		}
 
-		valid, err := g.ValidateLogin(user)
+		userId, err := g.ValidateLogin(user)
 
 		if err != nil {
 			user.Message = err.Error()
 			t, _ := template.ParseFiles("ui/login.html")
 			t.Execute(w, user)
 		} else {
-			if valid {
+			if userId > 0 {
+				g.Cache.Set("USER_SESSION", userId)
+
 				user.Message = "Welcome " + user.Name + "!"
 				t, _ := template.ParseFiles("ui/menu.html")
 				t.Execute(w, user)
@@ -115,31 +118,31 @@ func menu(w http.ResponseWriter, r *http.Request) {
 		t, _ := template.ParseFiles("ui/menu.html")
 		t.Execute(w, user)
 	case "POST":
-		name := r.FormValue("name")
-		password := r.FormValue("password")
+		// name := r.FormValue("name")
+		// password := r.FormValue("password")
 
-		user := models.User{
-			Name:     name,
-			Password: password,
-		}
+		// user := models.User{
+		// 	Name:     name,
+		// 	Password: password,
+		// }
 
-		valid, err := g.ValidateLogin(user)
+		// valid, err := g.ValidateLogin(user)
 
-		if err != nil {
-			user.Message = err.Error()
-		} else {
-			user = models.User{}
+		// if err != nil {
+		// 	user.Message = err.Error()
+		// } else {
+		// 	user = models.User{}
 
-			if valid {
-				user.Message = "Welcome " + user.Name
-				t, _ := template.ParseFiles("ui/menu.html")
-				t.Execute(w, user)
-			} else {
-				user.Message = "Invalid user or password!"
-				t, _ := template.ParseFiles("ui/login.html")
-				t.Execute(w, user)
-			}
-		}
+		// 	if valid {
+		// 		user.Message = "Welcome " + user.Name
+		// 		t, _ := template.ParseFiles("ui/menu.html")
+		// 		t.Execute(w, user)
+		// 	} else {
+		// 		user.Message = "Invalid user or password!"
+		// 		t, _ := template.ParseFiles("ui/login.html")
+		// 		t.Execute(w, user)
+		// 	}
+		// }
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}
@@ -152,26 +155,36 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		t, _ := template.ParseFiles("ui/create_game.html")
 		t.Execute(w, user)
 	case "POST":
-		//to be worked
-		// rows, _ := strconv.Atoi(r.FormValue("rows"))
-		// columns, _ := strconv.Atoi(r.FormValue("columns"))
-		// mines, _ := strconv.Atoi(r.FormValue("mines"))
+		rows, _ := strconv.Atoi(r.FormValue("rows"))
+		columns, _ := strconv.Atoi(r.FormValue("columns"))
+		mines, _ := strconv.Atoi(r.FormValue("mines"))
 
-		// game := models.Game{
-		// 	UserId:       1, //????
-		// 	TimeConsumed: 0,
-		// 	Status:       "Pending",
-		// 	Rows:         rows,
-		// 	Columns:      columns,
-		// 	Mines:        mines,
-		// }
+		userId, found := g.Cache.Get("USER_SESSION")
 
-		// id, err := g.CreateGame(game)
+		if !found {
+			//No user logged in
+			user := models.User{}
+			user.Message = "Session lost, please login again!"
+			t, _ := template.ParseFiles("ui/login.html")
+			t.Execute(w, user)
+			return
+		}
+
+		game := models.Game{
+			UserId:       int64(userId.(int)),
+			TimeConsumed: 0,
+			Status:       "Pending",
+			Rows:         rows,
+			Columns:      columns,
+			Mines:        mines,
+		}
+
+		g.CreateGame(game)
 
 		// if err != nil {
-		// 	user.Message = err.Error()
+		// 	game.Message = err.Error()
 		// } else {
-		// 	user = models.User{}
+		// 	game = models.Game{}
 
 		// 	if valid {
 		// 		user.Message = "Welcome " + user.Name

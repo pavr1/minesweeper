@@ -106,7 +106,7 @@ CREATE TABLE [dbo].[Game](
 	[UserId] [int] NOT NULL,
 	[CreatedDate] [datetime] NOT NULL,
 	[TimeConsumed] [float] NOT NULL,
-	[Status] [varbinary](20) NOT NULL
+	[Status] [varchar](20) NOT NULL
 ) ON [PRIMARY]
 GO
 ALTER TABLE [dbo].[Game]

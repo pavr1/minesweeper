@@ -6,7 +6,7 @@ import (
 )
 
 type User struct {
-	UserId      string
+	UserId      int64
 	Name        string
 	LastName    string
 	Password    string
@@ -15,23 +15,38 @@ type User struct {
 }
 
 func (u *User) Insert(db *dbhandler.DbHandler) error {
-	args := []string{u.Name, u.LastName, u.Password}
+	args := make([]interface{}, 3)
+	args = append(args, u.Name)
+	args = append(args, u.LastName)
+	args = append(args, u.Password)
 
-	return db.Execute(dbhandler.INSERT_USER, args)
+	id, err := db.Execute(dbhandler.INSERT_USER, args)
+
+	if err != nil {
+		return err
+	}
+
+	u.UserId = id
+
+	return nil
 }
 
-func (u *User) ValidateUser(db *dbhandler.DbHandler) (bool, error) {
+func (u *User) ValidateUser(db *dbhandler.DbHandler) (int, error) {
 	args := []string{u.Name, u.Password}
 
 	result, err := db.Select(dbhandler.VALIDATE_LOGIN, "User", args)
 
 	if err != nil {
-		return false, err
+		return -1, err
 	}
 
 	if result == nil {
-		return false, nil
+		return -1, nil
 	}
 
-	return len(result) > 0, nil
+	if len(result) == 0 {
+		return -1, nil
+	}
+
+	return result[0].(dbhandler.DbUser).UserId, nil
 }

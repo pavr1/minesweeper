@@ -21,7 +21,7 @@ type DbHandler struct {
 }
 
 type DbUser struct {
-	UserId      string
+	UserId      int
 	Name        string
 	LastName    string
 	Password    string
@@ -55,7 +55,7 @@ func createDatabase() (*sql.DB, error) {
 	return db, nil
 }
 
-func (h *DbHandler) Execute(statement string, args []string) error {
+func (h *DbHandler) Execute(statement string, args []interface{}) (int64, error) {
 	ctx := context.Background()
 	var err error
 	var db *sql.DB
@@ -64,7 +64,7 @@ func (h *DbHandler) Execute(statement string, args []string) error {
 		db, err = createDatabase()
 
 		if err != nil {
-			return err
+			return -1, err
 		}
 
 		h.Db = db
@@ -72,26 +72,24 @@ func (h *DbHandler) Execute(statement string, args []string) error {
 
 	err = h.Db.PingContext(ctx)
 	if err != nil {
-		return fmt.Errorf("Error pinging db server: %s" + err.Error())
+		return -1, fmt.Errorf("Error pinging db server: %s" + err.Error())
 	}
 
-	params := make([]interface{}, len(args))
-	for i := range args {
-		params[i] = args[i]
-	}
-
-	//set restult for Id to be returned
-	_, err = h.Db.Exec(statement, params...)
+	result, err := h.Db.QueryContext(ctx, statement, args...)
 
 	if err != nil {
-		return fmt.Errorf("Error executing statement: %s" + err.Error())
+		return -1, fmt.Errorf("Error executing statement: %s" + err.Error())
 	}
 
-	// if result != nil {
+	var id int64
+	result.Next()
+	err = result.Scan(&id)
 
-	// }
+	if err != nil {
+		return -1, fmt.Errorf("Error retrieving latest id after insert: %s" + err.Error())
+	}
 
-	return nil
+	return id, err
 }
 
 func (h *DbHandler) Select(statement, structType string, args []string) ([]interface{}, error) {
@@ -115,7 +113,7 @@ func (h *DbHandler) Select(statement, structType string, args []string) ([]inter
 		var users = []DbUser{}
 
 		for rows.Next() {
-			var userId string
+			var userId int
 			var name string
 			var lastName string
 			var password string
