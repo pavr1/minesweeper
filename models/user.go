@@ -14,13 +14,13 @@ type User struct {
 	Message     string
 }
 
-func (u *User) Insert(db *dbhandler.DbHandler) error {
-	args := make([]interface{}, 3)
+func (u *User) CreateUser(db *dbhandler.DbHandler) error {
+	args := make([]interface{}, 0)
 	args = append(args, u.Name)
 	args = append(args, u.LastName)
 	args = append(args, u.Password)
 
-	id, err := db.Execute(dbhandler.INSERT_USER, args)
+	id, err := db.Execute(dbhandler.CREATE_USER, args)
 
 	if err != nil {
 		return err

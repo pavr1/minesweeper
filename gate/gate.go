@@ -42,7 +42,7 @@ func (g *Gate) CreateUser(user models.User) error {
 		return fmt.Errorf("Password required")
 	}
 
-	err := user.Insert(g.DbHandler)
+	err := user.CreateUser(g.DbHandler)
 
 	if err != nil {
 		return err
