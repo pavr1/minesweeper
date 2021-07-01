@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [minesweeper]    Script Date: 6/30/2021 06:25:46 PM ******/
+/****** Object:  Database [minesweeper]    Script Date: 7/1/2021 05:38:59 PM ******/
 CREATE DATABASE [minesweeper]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -80,53 +80,106 @@ ALTER DATABASE [minesweeper] SET QUERY_STORE = OFF
 GO
 USE [minesweeper]
 GO
-/****** Object:  User [minesweeper]    Script Date: 6/30/2021 06:25:46 PM ******/
+/****** Object:  User [minesweeper]    Script Date: 7/1/2021 05:38:59 PM ******/
 CREATE USER [minesweeper] FOR LOGIN [minesweeper] WITH DEFAULT_SCHEMA=[dbo]
 GO
-/****** Object:  Table [dbo].[User]    Script Date: 6/30/2021 06:25:46 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[User](
-	[UserId] [int] IDENTITY(1,1) PRIMARY KEY,
-	[UserName] [varchar](50) NOT NULL,
-	[UserLastName] [varchar](50) NOT NULL,
-    [Password] [varchar](50) NOT NULL,
-	[CreatedDate] [datetime] NOT NULL
-) ON [PRIMARY]
-GO
-/****** Object:  Table [dbo].[Game]    Script Date: 6/30/2021 06:25:46 PM ******/
+/****** Object:  Table [dbo].[Game]    Script Date: 7/1/2021 05:38:59 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[Game](
-	[GameId] [int] IDENTITY(1,1) PRIMARY KEY,
+	[GameId] [int] IDENTITY(1,1) NOT NULL,
 	[UserId] [int] NOT NULL,
 	[CreatedDate] [datetime] NOT NULL,
 	[TimeConsumed] [float] NOT NULL,
-	[Status] [varchar](20) NOT NULL
+	[Status] [varchar](20) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[GameId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-ALTER TABLE [dbo].[Game]
-ADD FOREIGN KEY (UserId) REFERENCES [dbo].[User](UserId);
-/****** Object:  Table [dbo].[Spot]    Script Date: 6/30/2021 06:25:46 PM ******/
+/****** Object:  Table [dbo].[Spot]    Script Date: 7/1/2021 05:38:59 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[Spot](
-	[SpotId] [int] IDENTITY(1,1) PRIMARY KEY,
+	[SpotId] [int] IDENTITY(1,1) NOT NULL,
 	[GameId] [int] NOT NULL,
 	[Value] [varchar](1) NULL,
 	[X] [int] NOT NULL,
 	[Y] [int] NOT NULL,
 	[NearSpots] [varchar](max) NOT NULL,
-	[Status] [varchar](20) NULL
+	[Status] [varchar](20) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[SpotId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-ALTER TABLE [dbo].[Spot]
-ADD FOREIGN KEY (GameId) REFERENCES Game(GameId);
+GO
+/****** Object:  Table [dbo].[User]    Script Date: 7/1/2021 05:38:59 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[User](
+	[UserId] [int] IDENTITY(1,1) NOT NULL,
+	[UserName] [varchar](50) NOT NULL,
+	[UserLastName] [varchar](50) NOT NULL,
+	[Password] [varchar](50) NOT NULL,
+	[CreatedDate] [datetime] NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[UserId] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[Game]  WITH CHECK ADD FOREIGN KEY([UserId])
+REFERENCES [dbo].[User] ([UserId])
+GO
+ALTER TABLE [dbo].[Spot]  WITH CHECK ADD FOREIGN KEY([GameId])
+REFERENCES [dbo].[Game] ([GameId])
+GO
+/****** Object:  StoredProcedure [dbo].[CreateGame]    Script Date: 7/1/2021 05:38:59 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[CreateGame] (
+    @userId INT,
+    @timeConsumed INT,
+	@id INT OUTPUT
+) AS
+BEGIN
+    INSERT INTO [dbo].[Game] ([UserId],[CreatedDate],[TimeConsumed],[Status]) 
+	VALUES 
+	(@userId, GetDate(), @timeConsumed, 'Pending')
+
+    SET @id=SCOPE_IDENTITY()
+    RETURN  @id
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[CreateUser]    Script Date: 7/1/2021 05:38:59 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[CreateUser] (
+    @name VARCHAR(20),
+    @lastName VARCHAR(20),
+	@password VARCHAR(20),
+	@id INT OUTPUT
+) AS
+BEGIN
+    INSERT INTO [dbo].[User] ([UserName],[UserLastName],[Password],[CreatedDate]) 
+	VALUES 
+	(@name, @lastName, @password, GETDATE())
+
+    SET @id=SCOPE_IDENTITY()
+    RETURN  @id
+END;
 GO
 USE [master]
 GO
