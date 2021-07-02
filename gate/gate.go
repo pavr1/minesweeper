@@ -174,7 +174,7 @@ func setupMines(rows, coulmns, mines int, spots *map[string]*models.Spot) {
 		spot := val[id]
 
 		if spot.Value == "" {
-			spot.Value = "MINE"
+			spot.Value = "M"
 			mines--
 		}
 
@@ -255,6 +255,7 @@ func (g *Gate) InsertSpots(spots *map[string]*models.Spot, tx *sql.Tx, ctx *cont
 		err := spot.Insert(g.DbHandler, tx, ctx)
 
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 	}

@@ -109,10 +109,11 @@ func (h *DbHandler) ExecuteTransaction(statement string, args []interface{}, tx 
 	err = result.Scan(&id)
 
 	if err != nil {
+		fmt.Println(err.Error())
 		return -1, fmt.Errorf("Error retrieving latest id after insert: %s" + err.Error())
 	}
 
-	return id, err
+	return -1, err
 }
 
 func (h *DbHandler) Select(statement, structType string, args []string) ([]interface{}, error) {

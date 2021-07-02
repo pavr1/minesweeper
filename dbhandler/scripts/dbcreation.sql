@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [minesweeper]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  Database [minesweeper]    Script Date: 7/1/2021 09:21:51 PM ******/
 CREATE DATABASE [minesweeper]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -80,10 +80,10 @@ ALTER DATABASE [minesweeper] SET QUERY_STORE = OFF
 GO
 USE [minesweeper]
 GO
-/****** Object:  User [minesweeper]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  User [minesweeper]    Script Date: 7/1/2021 09:21:51 PM ******/
 CREATE USER [minesweeper] FOR LOGIN [minesweeper] WITH DEFAULT_SCHEMA=[dbo]
 GO
-/****** Object:  Table [dbo].[Game]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  Table [dbo].[Game]    Script Date: 7/1/2021 09:21:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -100,7 +100,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Spot]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  Table [dbo].[Spot]    Script Date: 7/1/2021 09:21:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -117,9 +117,9 @@ PRIMARY KEY CLUSTERED
 (
 	[SpotId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[User]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  Table [dbo].[User]    Script Date: 7/1/2021 09:21:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -142,7 +142,7 @@ GO
 ALTER TABLE [dbo].[Spot]  WITH CHECK ADD FOREIGN KEY([GameId])
 REFERENCES [dbo].[Game] ([GameId])
 GO
-/****** Object:  StoredProcedure [dbo].[CreateGame]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  StoredProcedure [dbo].[CreateGame]    Script Date: 7/1/2021 09:21:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -161,7 +161,29 @@ BEGIN
     RETURN  @id
 END;
 GO
-/****** Object:  StoredProcedure [dbo].[CreateUser]    Script Date: 7/1/2021 05:38:59 PM ******/
+/****** Object:  StoredProcedure [dbo].[CreateSpot]    Script Date: 7/1/2021 09:21:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[CreateSpot] (
+    @gameId INT,
+    @value VARCHAR(20),
+	@x INT,
+	@y INT,
+	@nearSpots VARCHAR(50),
+	@status VARCHAR(20),
+	@id INT OUTPUT
+) AS
+BEGIN
+    INSERT INTO [dbo].[Spot] ([GameId],[Value],[X],[Y],[NearSpots],[Status])
+     VALUES (@gameId, @value, @x, @y, @nearSpots, @status)
+
+    SET @id=SCOPE_IDENTITY()
+    RETURN  @id
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[CreateUser]    Script Date: 7/1/2021 09:21:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
