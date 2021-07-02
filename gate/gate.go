@@ -258,4 +258,6 @@ func (g *Gate) InsertSpots(spots *map[string]*models.Spot, tx *sql.Tx, ctx *cont
 			return err
 		}
 	}
+
+	return nil
 }
