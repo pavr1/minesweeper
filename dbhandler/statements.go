@@ -21,6 +21,9 @@ DECLARE	@return_value int,
 EXEC	@return_value = [dbo].[CreateGame]
 		@userId = @p1,
 		@timeConsumed = @p2,
+		@rows = @p3,
+		@columns = @p4,
+		@mines = @p5,
 		@id = @id OUTPUT
 
 SELECT	@id as N'@id'

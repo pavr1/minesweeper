@@ -29,6 +29,17 @@ type DbUser struct {
 	Message     string
 }
 
+type Game struct {
+	UserId       int64
+	GameId       int64
+	CreatedDate  time.Time
+	TimeConsumed float32
+	Status       string
+	Rows         int
+	Columns      int
+	Mines        int
+}
+
 func GetInstance() (*DbHandler, error) {
 	db, err := createDatabase()
 
@@ -109,11 +120,10 @@ func (h *DbHandler) ExecuteTransaction(statement string, args []interface{}, tx 
 	err = result.Scan(&id)
 
 	if err != nil {
-		fmt.Println(err.Error())
 		return -1, fmt.Errorf("Error retrieving latest id after insert: %s" + err.Error())
 	}
 
-	return -1, err
+	return id, err
 }
 
 func (h *DbHandler) Select(statement, structType string, args []string) ([]interface{}, error) {
@@ -161,6 +171,32 @@ func (h *DbHandler) Select(statement, structType string, args []string) ([]inter
 
 		return result, nil
 	case "Game":
+		var users = []DbUser{}
+
+		for rows.Next() {
+			var userId int
+			var name string
+			var lastName string
+			var password string
+			var createdDate time.Time
+
+			rows.Scan(&userId, &name, &lastName, &password, &createdDate)
+
+			users = append(users, DbUser{
+				UserId:      userId,
+				Name:        name,
+				LastName:    lastName,
+				Password:    password,
+				CreatedDate: createdDate,
+			})
+		}
+
+		result = make([]interface{}, len(users))
+		for i, v := range users {
+			result[i] = v
+		}
+
+		return result, nil
 	case "Spot":
 	}
 

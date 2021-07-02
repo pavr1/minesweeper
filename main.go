@@ -11,11 +11,22 @@ import (
 )
 
 var g *gate.Gate
+var funcTemplate *template.Template
 
 func main() {
 	var err error
 
 	g, err = gate.Start()
+
+	if err != nil {
+		panic(err.Error)
+	}
+
+	funcTemplate, err = template.New("ui/game.html").Funcs(template.FuncMap{
+		"increase": func(i int) int {
+			return -1
+		},
+	}).ParseFiles("ui/game.html")
 
 	if err != nil {
 		panic(err.Error)
@@ -179,23 +190,46 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 			Mines:        mines,
 		}
 
-		g.CreateGame(game)
+		spots, err := g.CreateGame(game)
 
-		// if err != nil {
-		// 	game.Message = err.Error()
-		// } else {
-		// 	game = models.Game{}
+		if err != nil {
+			game.Message = err.Error()
+		} else {
+			game.Message = "Game Created Successfully "
+			game.Spots = spots
 
-		// 	if valid {
-		// 		user.Message = "Welcome " + user.Name
-		// 		t, _ := template.ParseFiles("ui/menu.html")
-		// 		t.Execute(w, user)
-		// 	} else {
-		// 		user.Message = "Invalid user or password!"
-		// 		t, _ := template.ParseFiles("ui/login.html")
-		// 		t.Execute(w, user)
-		// 	}
-		// }
+			t, err := template.ParseFiles("ui/game.html")
+			if err != nil {
+				game.Message = err.Error()
+			}
+
+			t.Execute(w, game)
+			// t, err := funcTemplate.Clone()
+			// t = t.Funcs(template.FuncMap{
+			// 	"increase": func(i int) int {
+			// 		i++
+
+			// 		return i
+			// 	},
+			// })
+			// if err != nil {
+			// 	fmt.Println(err.Error())
+			// 	game.Message = err.Error()
+			// }
+			// err = t.Execute(w, game)
+			// err = template.Must(funcTemplate.Clone()).Funcs(template.FuncMap{
+			// 	"increase": func(i int) int {
+			// 		i++
+
+			// 		return i
+			// 	},
+			// }).Execute(w, game)
+
+			if err != nil {
+				fmt.Println(err.Error())
+				game.Message = err.Error()
+			}
+		}
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}

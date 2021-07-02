@@ -12,7 +12,7 @@ type Spot struct {
 	Value     string
 	X         int
 	Y         int
-	NearSpots map[string]*Spot
+	NearSpots map[string]Spot
 	Status    string
 }
 

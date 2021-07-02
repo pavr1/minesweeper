@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <title>MENU</title>
+    </head>
+    <body>
+        <h1>{{.Message}}</h1>
+        <h1>Game</h1>
+        Rows {{.Rows}}
+        Columns {{.Columns}}
+        Mines {{.Mines}}
+
+        <table>
+            <tr>
+                <td>SpotId</td>
+                <td>GameId</td>
+                <td>Value</td>
+                <td>X</td>
+                <td>Y</td>
+                <td>NearSpots</td>
+                <td>Status</td>
+            </tr>
+            {{ range .Spots}}
+                <tr>
+                    <td>{{ .SpotId }}</td>
+                    <td>{{ .GameId }}</td>
+                    <td>{{ .Value }}</td>
+                    <td>{{ .X }}</td>
+                    <td>{{ .Y }}</td>
+                    <td>{{ .NearSpots }}</td>
+                    <td>{{ .Status }}</td>
+                </tr>
+            {{ end}}
+        </table>
+    </body>
+</html>
