@@ -1,6 +1,8 @@
 package models
 
 import (
+	"context"
+	"database/sql"
 	"minesweeper/dbhandler"
 	"time"
 )
@@ -17,12 +19,12 @@ type Game struct {
 	Message      string
 }
 
-func (g *Game) Create(db *dbhandler.DbHandler) error {
+func (g *Game) Create(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context) error {
 	args := make([]interface{}, 0)
 	args = append(args, g.UserId)
 	args = append(args, g.TimeConsumed)
 
-	id, err := db.Execute(dbhandler.CREATE_GAME, args)
+	id, err := db.ExecuteTransaction(dbhandler.CREATE_GAME, args, tx, ctx)
 
 	if err != nil {
 		return err

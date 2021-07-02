@@ -1,6 +1,10 @@
 package models
 
-import "minesweeper/dbhandler"
+import (
+	"context"
+	"database/sql"
+	"minesweeper/dbhandler"
+)
 
 type Spot struct {
 	SpotId    int64
@@ -12,8 +16,8 @@ type Spot struct {
 	Status    string
 }
 
-func (s *Spot) Insert(db *dbhandler.DbHandler) error {
-	args := make([]interface{}, 3)
+func (s *Spot) Insert(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context) error {
+	args := make([]interface{}, 0)
 	args = append(args, s.GameId)
 	args = append(args, s.Value)
 	args = append(args, s.X)
@@ -21,14 +25,14 @@ func (s *Spot) Insert(db *dbhandler.DbHandler) error {
 
 	nearSpots := ""
 
-	for key, _ := range s.NearSpots {
+	for key := range s.NearSpots {
 		nearSpots += key + "|"
 	}
 
 	args = append(args, nearSpots)
 	args = append(args, s.Status)
 
-	id, err := db.Execute(dbhandler.CREATE_GAME, args)
+	id, err := db.ExecuteTransaction(dbhandler.CREATE_SPOT, args, tx, ctx)
 
 	if err != nil {
 		return err

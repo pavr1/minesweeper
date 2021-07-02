@@ -47,6 +47,8 @@ func createDatabase() (*sql.DB, error) {
 	connString := fmt.Sprintf("server=%s;database=%s;port=%d;Trusted_Connection=true", server, databasename, port)
 
 	db, err := sql.Open("sqlserver", connString)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error creating db instance: %s" + err.Error())
@@ -72,10 +74,31 @@ func (h *DbHandler) Execute(statement string, args []interface{}) (int64, error)
 
 	err = h.Db.PingContext(ctx)
 	if err != nil {
+		fmt.Println(err.Error())
 		return -1, fmt.Errorf("Error pinging db server: %s" + err.Error())
 	}
 
 	result, err := h.Db.QueryContext(ctx, statement, args...)
+
+	if err != nil {
+		return -1, fmt.Errorf("Error executing statement: %s" + err.Error())
+	}
+
+	var id int64
+	result.Next()
+	err = result.Scan(&id)
+
+	if err != nil {
+		return -1, fmt.Errorf("Error retrieving latest id after insert: %s" + err.Error())
+	}
+
+	return id, err
+}
+
+func (h *DbHandler) ExecuteTransaction(statement string, args []interface{}, tx *sql.Tx, ctx *context.Context) (int64, error) {
+	var err error
+
+	result, err := tx.QueryContext(*ctx, statement, args...)
 
 	if err != nil {
 		return -1, fmt.Errorf("Error executing statement: %s" + err.Error())
