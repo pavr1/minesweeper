@@ -42,3 +42,30 @@ func (s *Spot) Insert(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context)
 
 	return nil
 }
+
+func GetSpotsByGameId(gameId int64, db *dbhandler.DbHandler) ([]Spot, error) {
+	args := make([]interface{}, 0)
+	args = append(args, gameId)
+
+	results := make([]Spot, 0)
+	r, err := db.Select(dbhandler.SELECT_SPOTS_BY_GAME_ID, "Spot", args)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, spot := range r {
+		dbspot := spot.(dbhandler.DbSpot)
+		results = append(results, Spot{
+			SpotId:    dbspot.SpotId,
+			GameId:    dbspot.GameId,
+			Value:     dbspot.Value,
+			X:         dbspot.X,
+			Y:         dbspot.Y,
+			NearSpots: make(map[string]Spot),
+			Status:    dbspot.Status,
+		})
+	}
+
+	return results, nil
+}

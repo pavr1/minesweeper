@@ -3,7 +3,8 @@
         <title>Create Name</title>
     </head>
     <body>
-        <h1>Create Game</h1>
+        <h2><a href="/menu"><< </a> Create Game</h2>
+        <h3>{{.Message}}</h3>
         <form action="./creategame" method="Post">
             <table border="0">
                 <tr>
@@ -19,11 +20,9 @@
                     <td><input type="number" id="mines" name="mines" placeholder="mines" value="{{.Password}}"></input></td>
                 </tr>
                 <tr>
-                    <td><a href="/"><< Back</a></td>
                     <td><input type="submit"></input></td>
                 </tr>
             </table>
-            <h1>{{.Message}}</h1>
         </form>
     </body>
 </html>

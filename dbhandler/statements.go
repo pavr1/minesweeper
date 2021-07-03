@@ -45,3 +45,22 @@ EXEC	@return_value = [dbo].[CreateSpot]
 
 SELECT	@id as N'@id'
 `
+const SELECT_GAMES_BY_USER = `
+	SELECT [GameId],[UserId],[CreatedDate],[TimeConsumed],[Status],[Rows],[Columns],[Mines] 
+		FROM [minesweeper].[dbo].[Game] 
+	WHERE UserId = @p1 AND STATUS='Pending'`
+
+const SELECT_GAME_BY_ID = `
+	SELECT [GameId],[UserId],[CreatedDate],[TimeConsumed],[Status],[Rows],[Columns],[Mines] 
+		FROM [minesweeper].[dbo].[Game] 
+	WHERE GameId = @p1`
+
+const SELECT_LATEST_GAME = `
+	SELECT TOP 1 [GameId],[UserId],[CreatedDate],[TimeConsumed],[Status],[Rows],[Columns],[Mines] 
+		FROM [minesweeper].[dbo].[Game] 
+	WHERE UserId = @p1 ORDER BY CreatedDate DESC`
+
+const SELECT_SPOTS_BY_GAME_ID = `
+	SELECT TOP (1000) [SpotId],[GameId],[Value],[X],[Y],[NearSpots],[Status]
+		FROM [minesweeper].[dbo].[Spot] 
+	WHERE GameId = @p1`

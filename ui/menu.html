@@ -3,12 +3,22 @@
         <title>MENU</title>
     </head>
     <body>
-        <h1>{{.Message}}</h1>
-        <h1>MENU</h1>
+        <h2>MENU</h2><h3>{{.Message}}</h3>
+        <a href='/logout'>Logout</a>
+
         <table style="width: 100%;border:1">
             <tr>
-                <td><a href="./creategame">Create Game</a></td>
+                <td><a href="./creategame"><h3>Create New Game</h3></a></td>
             </tr>
+            <tr>
+                <td><h3>Pending Games</h3></td>
+            </tr>
+            {{ range .PendingGames}}
+                <tr>
+                    <td><a href='/LoadPendingGame?gameId={{.GameId}}'>{{ .CreatedDate }}</a></td>
+                </tr>
+            {{ end}}
+
             <tr>
                 <td><a href="./login">...</a></td>
             </tr>

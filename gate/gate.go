@@ -7,6 +7,7 @@ import (
 	"minesweeper/ccache"
 	"minesweeper/dbhandler"
 	"minesweeper/models"
+	"strconv"
 )
 
 type Gate struct {
@@ -51,22 +52,22 @@ func (g *Gate) CreateUser(user models.User) error {
 	return nil
 }
 
-func (g *Gate) ValidateLogin(user models.User) (int, error) {
+func (g *Gate) ValidateLogin(user models.User) (*models.User, error) {
 	if user.Name == "" {
-		return -1, fmt.Errorf("user name required")
+		return nil, fmt.Errorf("user name required")
 	}
 
 	if user.Password == "" {
-		return -1, fmt.Errorf("password required")
+		return nil, fmt.Errorf("password required")
 	}
 
-	userId, err := user.ValidateUser(g.DbHandler)
+	result, err := user.ValidateUser(g.DbHandler)
 
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
-	return userId, nil
+	return result, nil
 }
 
 func (g *Gate) CreateGame(game models.Game) (map[string]models.Spot, error) {
@@ -87,6 +88,14 @@ func (g *Gate) CreateGame(game models.Game) (map[string]models.Spot, error) {
 		return nil, err
 	}
 
+	gamePtr, err := models.GetLatestGame(game.UserId, g.DbHandler, tx, &ctx)
+
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	game = *gamePtr
 	spots, err := game.GenerateGrid()
 
 	if err != nil {
@@ -94,7 +103,7 @@ func (g *Gate) CreateGame(game models.Game) (map[string]models.Spot, error) {
 		return nil, err
 	}
 
-	err = g.InsertSpots(spots, tx, &ctx)
+	err = g.insertSpots(spots, tx, &ctx)
 
 	if err != nil {
 		tx.Rollback()
@@ -106,7 +115,7 @@ func (g *Gate) CreateGame(game models.Game) (map[string]models.Spot, error) {
 	return *spots, nil
 }
 
-func (g *Gate) InsertSpots(spots *map[string]models.Spot, tx *sql.Tx, ctx *context.Context) error {
+func (g *Gate) insertSpots(spots *map[string]models.Spot, tx *sql.Tx, ctx *context.Context) error {
 	for key, spot := range *spots {
 		err := spot.Insert(g.DbHandler, tx, ctx)
 
@@ -119,4 +128,42 @@ func (g *Gate) InsertSpots(spots *map[string]models.Spot, tx *sql.Tx, ctx *conte
 	}
 
 	return nil
+}
+
+func (g *Gate) GetPendingGames(userId int64) ([]models.Game, error) {
+	games, err := models.GetPendingGames(userId, g.DbHandler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return games, nil
+}
+
+func (g *Gate) GetSingleGame(gameId int64) (*models.Game, error) {
+	game, err := models.GetSingleGame(gameId, g.DbHandler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	game.Spots = make(map[string]models.Spot)
+	spotList, err := models.GetSpotsByGameId(gameId, g.DbHandler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range spotList {
+		spot := spotList[i]
+		id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
+
+		game.Spots[id] = spot
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return game, nil
 }

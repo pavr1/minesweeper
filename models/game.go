@@ -187,3 +187,93 @@ func loadNearSpots(x, y, rows, colums int, spots map[string]Spot) map[string]Spo
 
 	return nearSpots
 }
+
+func GetPendingGames(userId int64, db *dbhandler.DbHandler) ([]Game, error) {
+	args := make([]interface{}, 0)
+	args = append(args, userId)
+
+	results := make([]Game, 0)
+	r, err := db.Select(dbhandler.SELECT_GAMES_BY_USER, "Game", args)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, game := range r {
+		dbgame := game.(dbhandler.DbGame)
+		results = append(results, Game{
+			GameId:       dbgame.GameId,
+			UserId:       dbgame.UserId,
+			CreatedDate:  dbgame.CreatedDate,
+			TimeConsumed: dbgame.TimeConsumed,
+			Status:       dbgame.Status,
+			Rows:         dbgame.Rows,
+			Columns:      dbgame.Columns,
+			Mines:        dbgame.Mines,
+		})
+	}
+
+	return results, nil
+}
+
+func GetSingleGame(gameId int64, db *dbhandler.DbHandler) (*Game, error) {
+	args := make([]interface{}, 0)
+	args = append(args, gameId)
+
+	r, err := db.Select(dbhandler.SELECT_GAME_BY_ID, "Game", args)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var game Game
+
+	for _, g := range r {
+		dbgame := g.(dbhandler.DbGame)
+		game = Game{
+			GameId:       dbgame.GameId,
+			UserId:       dbgame.UserId,
+			CreatedDate:  dbgame.CreatedDate,
+			TimeConsumed: dbgame.TimeConsumed,
+			Status:       dbgame.Status,
+			Rows:         dbgame.Rows,
+			Columns:      dbgame.Columns,
+			Mines:        dbgame.Mines,
+		}
+
+		break
+	}
+
+	return &game, nil
+}
+
+func GetLatestGame(userId int64, db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context) (*Game, error) {
+	args := make([]interface{}, 0)
+	args = append(args, userId)
+
+	r, err := db.SelectTransaction(dbhandler.SELECT_LATEST_GAME, "Game", args, tx, ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var game Game
+
+	for _, g := range r {
+		dbgame := g.(dbhandler.DbGame)
+		game = Game{
+			GameId:       dbgame.GameId,
+			UserId:       dbgame.UserId,
+			CreatedDate:  dbgame.CreatedDate,
+			TimeConsumed: dbgame.TimeConsumed,
+			Status:       dbgame.Status,
+			Rows:         dbgame.Rows,
+			Columns:      dbgame.Columns,
+			Mines:        dbgame.Mines,
+		}
+
+		break
+	}
+
+	return &game, nil
+}

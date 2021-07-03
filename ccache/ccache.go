@@ -25,3 +25,7 @@ func (c *CCache) Set(key string, data interface{}) {
 func (c *CCache) Get(key string) (interface{}, bool) {
 	return c.Cache.Get(key)
 }
+
+func (c *CCache) Flush() {
+	c.Cache.Flush()
+}

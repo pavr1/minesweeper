@@ -35,8 +35,10 @@ func main() {
 	http.HandleFunc("/", start)
 	http.HandleFunc("/signup", singup)
 	http.HandleFunc("/login", login)
+	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/menu", menu)
 	http.HandleFunc("/creategame", createGame)
+	http.HandleFunc("/LoadPendingGame", LoadPendingGame)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
@@ -98,15 +100,19 @@ func login(w http.ResponseWriter, r *http.Request) {
 			Password: password,
 		}
 
-		userId, err := g.ValidateLogin(user)
+		resultUser, err := g.ValidateLogin(user)
 
 		if err != nil {
 			user.Message = err.Error()
 			t, _ := template.ParseFiles("ui/login.html")
 			t.Execute(w, user)
 		} else {
-			if userId > 0 {
-				g.Cache.Set("USER_SESSION", userId)
+			if resultUser != nil {
+				user = *resultUser
+				pendingGames, _ := g.GetPendingGames(user.UserId)
+				user.PendingGames = pendingGames
+
+				g.Cache.Set("USER_SESSION", user)
 
 				user.Message = "Welcome " + user.Name + "!"
 				t, _ := template.ParseFiles("ui/menu.html")
@@ -125,7 +131,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 func menu(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		user := models.User{}
+		user := getLoggedinUser(w)
+
 		t, _ := template.ParseFiles("ui/menu.html")
 		t.Execute(w, user)
 	case "POST":
@@ -170,7 +177,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		columns, _ := strconv.Atoi(r.FormValue("columns"))
 		mines, _ := strconv.Atoi(r.FormValue("mines"))
 
-		userId, found := g.Cache.Get("USER_SESSION")
+		user, found := g.Cache.Get("USER_SESSION")
 
 		if !found {
 			//No user logged in
@@ -182,7 +189,91 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		}
 
 		game := models.Game{
-			UserId:       int64(userId.(int)),
+			UserId:       int64(user.(models.User).UserId),
+			TimeConsumed: 0,
+			Status:       "Pending",
+			Rows:         rows,
+			Columns:      columns,
+			Mines:        mines,
+		}
+
+		spots, err := g.CreateGame(game)
+
+		if err != nil {
+			game.Message = err.Error()
+			t, err := template.ParseFiles("ui/game.html")
+			if err != nil {
+				game.Message = err.Error()
+			}
+
+			t.Execute(w, game)
+		} else {
+			game.Message = "Game Created Successfully "
+			game.Spots = spots
+
+			t, err := template.ParseFiles("ui/game.html")
+			if err != nil {
+				game.Message = err.Error()
+			}
+
+			t.Execute(w, game)
+
+			// t, err := funcTemplate.Clone()
+			// t = t.Funcs(template.FuncMap{
+			// 	"increase": func(i int) int {
+			// 		i++
+
+			// 		return i
+			// 	},
+			// })
+			// if err != nil {
+			// 	fmt.Println(err.Error())
+			// 	game.Message = err.Error()
+			// }
+			// err = t.Execute(w, game)
+			// err = template.Must(funcTemplate.Clone()).Funcs(template.FuncMap{
+			// 	"increase": func(i int) int {
+			// 		i++
+
+			// 		return i
+			// 	},
+			// }).Execute(w, game)
+		}
+	default:
+		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
+	}
+}
+
+func LoadPendingGame(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		gameId, _ := strconv.Atoi(r.FormValue("gameId"))
+		game, err := g.GetSingleGame(int64(gameId))
+
+		if err != nil {
+			game.Message = err.Error()
+		}
+
+		t, _ := template.ParseFiles("ui/game.html")
+		t.Execute(w, game)
+	case "POST":
+		rows, _ := strconv.Atoi(r.FormValue("rows"))
+		columns, _ := strconv.Atoi(r.FormValue("columns"))
+		mines, _ := strconv.Atoi(r.FormValue("mines"))
+
+		user, found := g.Cache.Get("USER_SESSION")
+
+		if !found {
+			//No user logged in
+			user := models.User{}
+			user.Message = "Session lost, please login again!"
+			t, _ := template.ParseFiles("ui/login.html")
+			t.Execute(w, user)
+			return
+		}
+
+		game := models.Game{
+			UserId:       int64(user.(models.User).UserId),
 			TimeConsumed: 0,
 			Status:       "Pending",
 			Rows:         rows,
@@ -233,4 +324,27 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	g.Cache.Flush()
+
+	getLoggedinUser(w)
+}
+
+func getLoggedinUser(w http.ResponseWriter) *models.User {
+	obj, found := g.Cache.Get("USER_SESSION")
+
+	if found {
+		user := obj.(models.User)
+
+		return &user
+	}
+
+	t, _ := template.ParseFiles("ui/login.html")
+	t.Execute(w, models.User{
+		Message: "Please loging",
+	})
+
+	return nil
 }
