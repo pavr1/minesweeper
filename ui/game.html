@@ -10,7 +10,7 @@
         Mines {{.Mines}}
 
         <table>
-            <tr>
+            <!-- <tr>
                 <td>SpotId</td>
                 <td>GameId</td>
                 <td>Value</td>
@@ -18,18 +18,23 @@
                 <td>Y</td>
                 <td>NearSpots</td>
                 <td>Status</td>
-            </tr>
-            {{ range .Spots}}
-                <tr>
-                    <td>{{ .SpotId }}</td>
-                    <td>{{ .GameId }}</td>
-                    <td>{{ .Value }}</td>
-                    <td>{{ .X }}</td>
-                    <td>{{ .Y }}</td>
-                    <td>{{ .NearSpots }}</td>
-                    <td>{{ .Status }}</td>
-                </tr>
+            </tr> -->
+            {{$currentX := "0"}}
+            <tr>
+            {{range $index, $page := .Spots}}
+                {{ $c := $index }}
+                {{ $x := slice $c  0 1}}
+
+                {{if eq $x $currentX}}
+                    <td>{{.Value}}</td>
+                {{else}}
+                    {{$currentX = $x}}
+                    </tr>
+                    <tr>
+                {{ end}}
             {{ end}}
+            <td></td>
+            </tr>
         </table>
     </body>
 </html>
