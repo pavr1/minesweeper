@@ -219,41 +219,12 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 			game.Message = "Game Created Successfully "
 			game.Spots = *newSpots
 
-			// t, err := template.ParseFiles("ui/game.html")
-			// if err != nil {
-			// 	game.Message = err.Error()
-			// }
+			t, err := template.ParseFiles("ui/game.html")
+			if err != nil {
+				game.Message = err.Error()
+			}
 
-			// t.Execute(w, game)
-
-			// t, err := funcTemplate.Clone()
-			// t = t.Funcs(template.FuncMap{
-			// 	"inc": func(i int) int {
-			// 		i++
-
-			// 		return i
-			// 	},
-			// })
-			// if err != nil {
-			// 	fmt.Println(err.Error())
-			// 	game.Message = err.Error()
-			// }
-			//err = t.Execute(w, game)
-
-			// tpl := template.Must(template.New("").Funcs(
-			// 	template.FuncMap{
-			// 		"inc": func() int {
-			// 			return 1
-			// 		},
-			// 	},
-			// ).ParseFiles("ui/game.html"))
-			// tpl.Execute(w, game)
-
-			err = template.Must(funcTemplate.Clone()).Funcs(template.FuncMap{
-				"inc": func() int {
-					return 1
-				},
-			}).Execute(w, game)
+			t.Execute(w, game)
 		}
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
