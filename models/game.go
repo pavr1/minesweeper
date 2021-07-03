@@ -1,8 +1,6 @@
 package models
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"math/rand"
 	"minesweeper/dbhandler"
@@ -24,24 +22,21 @@ type Game struct {
 	Message      string
 }
 
-func (g *Game) Create(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context) error {
+func (g *Game) Create(handler *dbhandler.DbHandler) (int64, error) {
 	args := make([]interface{}, 0)
 	args = append(args, g.UserId)
 	args = append(args, g.TimeConsumed)
-	args = append(args, g.Status)
 	args = append(args, g.Rows)
 	args = append(args, g.Columns)
 	args = append(args, g.Mines)
 
-	id, err := db.ExecuteTransaction(dbhandler.CREATE_GAME, args, tx, ctx)
+	id, err := handler.Execute(dbhandler.CREATE_GAME, args)
 
 	if err != nil {
-		return err
+		return -1, err
 	}
 
-	g.GameId = id
-
-	return nil
+	return id, nil
 }
 
 func (g *Game) GenerateGrid() (*map[string]Spot, error) {
@@ -188,12 +183,12 @@ func loadNearSpots(x, y, rows, colums int, spots map[string]Spot) map[string]Spo
 	return nearSpots
 }
 
-func GetPendingGames(userId int64, db *dbhandler.DbHandler) ([]Game, error) {
+func GetPendingGames(handler *dbhandler.DbHandler, userId int64) ([]Game, error) {
 	args := make([]interface{}, 0)
 	args = append(args, userId)
 
 	results := make([]Game, 0)
-	r, err := db.Select(dbhandler.SELECT_GAMES_BY_USER, "Game", args)
+	r, err := handler.Select(dbhandler.SELECT_GAMES_BY_USER, "Game", args)
 
 	if err != nil {
 		return nil, err
@@ -216,11 +211,11 @@ func GetPendingGames(userId int64, db *dbhandler.DbHandler) ([]Game, error) {
 	return results, nil
 }
 
-func GetSingleGame(gameId int64, db *dbhandler.DbHandler) (*Game, error) {
+func GetSingleGame(handler *dbhandler.DbHandler, gameId int64) (*Game, error) {
 	args := make([]interface{}, 0)
 	args = append(args, gameId)
 
-	r, err := db.Select(dbhandler.SELECT_GAME_BY_ID, "Game", args)
+	r, err := handler.Select(dbhandler.SELECT_GAME_BY_ID, "Game", args)
 
 	if err != nil {
 		return nil, err
@@ -247,11 +242,11 @@ func GetSingleGame(gameId int64, db *dbhandler.DbHandler) (*Game, error) {
 	return &game, nil
 }
 
-func GetLatestGame(userId int64, db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context) (*Game, error) {
+func GetLatestGame(handler *dbhandler.DbHandler, userId int64) (*Game, error) {
 	args := make([]interface{}, 0)
 	args = append(args, userId)
 
-	r, err := db.SelectTransaction(dbhandler.SELECT_LATEST_GAME, "Game", args, tx, ctx)
+	r, err := handler.Select(dbhandler.SELECT_LATEST_GAME, "Game", args)
 
 	if err != nil {
 		return nil, err

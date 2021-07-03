@@ -16,7 +16,7 @@ type Gate struct {
 }
 
 func Start() (*Gate, error) {
-	handler, err := dbhandler.GetInstance()
+	handler, err := dbhandler.InitConnection()
 
 	if err != nil {
 		return nil, err
@@ -70,40 +70,32 @@ func (g *Gate) ValidateLogin(user models.User) (*models.User, error) {
 	return result, nil
 }
 
-func (g *Gate) CreateGame(game models.Game) (map[string]models.Spot, error) {
+func (g *Gate) CreateGame(game *models.Game) (*map[string]models.Spot, error) {
 	if game.UserId == 0 {
 		return nil, fmt.Errorf("user id required")
 	}
 
-	ctx := context.Background()
-	tx, err := g.DbHandler.Db.BeginTx(ctx, nil)
+	gameId, err := game.Create(g.DbHandler)
+
 	if err != nil {
 		return nil, err
 	}
 
-	err = game.Create(g.DbHandler, tx, &ctx)
-
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	gamePtr, err := models.GetLatestGame(game.UserId, g.DbHandler, tx, &ctx)
-
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	game = *gamePtr
+	game.GameId = gameId
 	spots, err := game.GenerateGrid()
 
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	err = g.insertSpots(spots, tx, &ctx)
+	ctx := context.Background()
+	conn, err := g.DbHandler.DB.Conn(ctx)
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = g.insertSpots(spots, tx)
 
 	if err != nil {
 		tx.Rollback()
@@ -112,12 +104,12 @@ func (g *Gate) CreateGame(game models.Game) (map[string]models.Spot, error) {
 
 	tx.Commit()
 
-	return *spots, nil
+	return spots, nil
 }
 
-func (g *Gate) insertSpots(spots *map[string]models.Spot, tx *sql.Tx, ctx *context.Context) error {
+func (g *Gate) insertSpots(spots *map[string]models.Spot, tx *sql.Tx) error {
 	for key, spot := range *spots {
-		err := spot.Insert(g.DbHandler, tx, ctx)
+		err := spot.Insert(g.DbHandler, tx)
 
 		if err != nil {
 			return err
@@ -131,7 +123,7 @@ func (g *Gate) insertSpots(spots *map[string]models.Spot, tx *sql.Tx, ctx *conte
 }
 
 func (g *Gate) GetPendingGames(userId int64) ([]models.Game, error) {
-	games, err := models.GetPendingGames(userId, g.DbHandler)
+	games, err := models.GetPendingGames(g.DbHandler, userId)
 
 	if err != nil {
 		return nil, err
@@ -141,14 +133,15 @@ func (g *Gate) GetPendingGames(userId int64) ([]models.Game, error) {
 }
 
 func (g *Gate) GetSingleGame(gameId int64) (*models.Game, error) {
-	game, err := models.GetSingleGame(gameId, g.DbHandler)
+	game, err := models.GetSingleGame(g.DbHandler, gameId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	game.Spots = make(map[string]models.Spot)
-	spotList, err := models.GetSpotsByGameId(gameId, g.DbHandler)
+	spots := make(map[string]models.Spot)
+	game.Spots = spots
+	spotList, err := models.GetSpotsByGameId(g.DbHandler, gameId)
 
 	if err != nil {
 		return nil, err

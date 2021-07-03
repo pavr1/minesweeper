@@ -15,19 +15,16 @@ EXEC	@return_value = [dbo].[CreateUser]
 SELECT	@id as N'@id'
 `
 const CREATE_GAME = `
-DECLARE	@return_value int,
-		@id int
+DECLARE	@return_value int
 
 EXEC	@return_value = [dbo].[CreateGame]
 		@userId = @p1,
 		@timeConsumed = @p2,
-		@status =@p3,
-		@rows = @p4,
-		@columns = @p5,
-		@mines = @p6,
-		@id = @id OUTPUT
+		@rows = @p3,
+		@columns = @p4,
+		@mines = @p5
 
-SELECT	@id as N'@id'
+SELECT	@return_value
 `
 
 const CREATE_SPOT = `

@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"database/sql"
 	"minesweeper/dbhandler"
 )
@@ -16,7 +15,7 @@ type Spot struct {
 	Status    string
 }
 
-func (s *Spot) Insert(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context) error {
+func (s *Spot) Insert(handler *dbhandler.DbHandler, tx *sql.Tx) error {
 	args := make([]interface{}, 0)
 	args = append(args, s.GameId)
 	args = append(args, s.Value)
@@ -32,7 +31,7 @@ func (s *Spot) Insert(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context)
 	args = append(args, nearSpots)
 	args = append(args, s.Status)
 
-	id, err := db.ExecuteTransaction(dbhandler.CREATE_SPOT, args, tx, ctx)
+	id, err := handler.ExecuteTransaction(tx, dbhandler.CREATE_SPOT, args)
 
 	if err != nil {
 		return err
@@ -43,12 +42,12 @@ func (s *Spot) Insert(db *dbhandler.DbHandler, tx *sql.Tx, ctx *context.Context)
 	return nil
 }
 
-func GetSpotsByGameId(gameId int64, db *dbhandler.DbHandler) ([]Spot, error) {
+func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) ([]Spot, error) {
 	args := make([]interface{}, 0)
 	args = append(args, gameId)
 
 	results := make([]Spot, 0)
-	r, err := db.Select(dbhandler.SELECT_SPOTS_BY_GAME_ID, "Spot", args)
+	r, err := handler.Select(dbhandler.SELECT_SPOTS_BY_GAME_ID, "Spot", args)
 
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"minesweeper/gate"
@@ -12,6 +13,7 @@ import (
 
 var g *gate.Gate
 var funcTemplate *template.Template
+var db *sql.DB
 
 func main() {
 	var err error
@@ -21,6 +23,8 @@ func main() {
 	if err != nil {
 		panic(err.Error)
 	}
+
+	defer g.DbHandler.DB.Close()
 
 	funcTemplate, err = template.New("ui/game.html").Funcs(template.FuncMap{
 		"increase": func(i int) int {
@@ -78,7 +82,7 @@ func singup(w http.ResponseWriter, r *http.Request) {
 			user.Message = "User created successfully!"
 		}
 
-		t, _ := template.ParseFiles("ui/sign_up.html")
+		t, _ := template.ParseFiles("ui/login.html")
 		t.Execute(w, user)
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
@@ -108,9 +112,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 			t.Execute(w, user)
 		} else {
 			if resultUser != nil {
+				resultUser, err := user.ValidateUser(g.DbHandler)
+
+				if err != nil {
+					g.Cache.Set("USER_SESSION", user)
+				}
+
 				user = *resultUser
-				pendingGames, _ := g.GetPendingGames(user.UserId)
-				user.PendingGames = pendingGames
 
 				g.Cache.Set("USER_SESSION", user)
 
@@ -188,7 +196,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		game := models.Game{
+		game := &models.Game{
 			UserId:       int64(user.(models.User).UserId),
 			TimeConsumed: 0,
 			Status:       "Pending",
@@ -197,11 +205,11 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 			Mines:        mines,
 		}
 
-		spots, err := g.CreateGame(game)
+		newSpots, err := g.CreateGame(game)
 
 		if err != nil {
 			game.Message = err.Error()
-			t, err := template.ParseFiles("ui/game.html")
+			t, err := template.ParseFiles("ui/create_game.html")
 			if err != nil {
 				game.Message = err.Error()
 			}
@@ -209,7 +217,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 			t.Execute(w, game)
 		} else {
 			game.Message = "Game Created Successfully "
-			game.Spots = spots
+			game.Spots = *newSpots
 
 			t, err := template.ParseFiles("ui/game.html")
 			if err != nil {
@@ -281,13 +289,13 @@ func LoadPendingGame(w http.ResponseWriter, r *http.Request) {
 			Mines:        mines,
 		}
 
-		spots, err := g.CreateGame(game)
+		newSpots, err := g.CreateGame(&game)
 
 		if err != nil {
 			game.Message = err.Error()
 		} else {
 			game.Message = "Game Created Successfully "
-			game.Spots = spots
+			game.Spots = *newSpots
 
 			t, err := template.ParseFiles("ui/game.html")
 			if err != nil {

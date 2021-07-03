@@ -17,7 +17,7 @@ var password = "minesweeper"
 var databasename = "minesweeper"
 
 type DbHandler struct {
-	Db *sql.DB
+	DB *sql.DB
 }
 
 type DbUser struct {
@@ -50,74 +50,61 @@ type DbSpot struct {
 	Status    string
 }
 
-func GetInstance() (*DbHandler, error) {
-	db, err := createDatabase()
-
-	if err != nil {
-		return nil, err
-	}
-
-	handler := DbHandler{
-		Db: db,
-	}
-
-	return &handler, nil
-}
-
-func createDatabase() (*sql.DB, error) {
+func InitConnection() (*DbHandler, error) {
 	connString := fmt.Sprintf("server=%s;database=%s;port=%d;Trusted_Connection=true", server, databasename, port)
 
 	db, err := sql.Open("sqlserver", connString)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error creating db instance: %s" + err.Error())
 	}
 
-	return db, nil
+	handler := &DbHandler{
+		DB: db,
+	}
+
+	return handler, nil
 }
 
 func (h *DbHandler) Execute(statement string, args []interface{}) (int64, error) {
 	ctx := context.Background()
 	var err error
-	var db *sql.DB
 
-	if h.Db == nil {
-		db, err = createDatabase()
-
-		if err != nil {
-			return -1, err
-		}
-
-		h.Db = db
-	}
-
-	err = h.Db.PingContext(ctx)
-	if err != nil {
-		fmt.Println(err.Error())
-		return -1, fmt.Errorf("Error pinging db server: %s" + err.Error())
-	}
-
-	result, err := h.Db.QueryContext(ctx, statement, args...)
+	conn, err := h.DB.Conn(ctx)
 
 	if err != nil {
 		return -1, fmt.Errorf("Error executing statement: %s" + err.Error())
 	}
 
+	defer conn.Close()
+
+	result, err := conn.QueryContext(ctx, statement, args...)
+
+	if err != nil {
+		return -1, fmt.Errorf("Error executing statement: %s" + err.Error())
+	}
+
+	defer result.Close()
 	var id int64
 	result.Next()
 	err = result.Scan(&id)
 
 	if err != nil {
-		return -1, fmt.Errorf("Error retrieving latest id after insert: %s" + err.Error())
+		return -1, err
 	}
 
 	return id, err
 }
 
-func (h *DbHandler) ExecuteTransaction(statement string, args []interface{}, tx *sql.Tx, ctx *context.Context) (int64, error) {
+func (h *DbHandler) ExecuteTransaction(tx *sql.Tx, statement string, args []interface{}) (int64, error) {
 	var err error
+
+	if err != nil {
+		return -1, fmt.Errorf("Error executing statement: %s" + err.Error())
+	}
 
 	result, err := tx.Query(statement, args...)
 
@@ -132,20 +119,29 @@ func (h *DbHandler) ExecuteTransaction(statement string, args []interface{}, tx 
 	if err != nil {
 		fmt.Println(fmt.Errorf("Error retrieving latest id after insert: " + err.Error()))
 		//return -1, fmt.Errorf("Error retrieving latest id after insert: " + err.Error())
+		err = nil
 	}
 
-	return id, nil
+	return id, err
 }
 
 func (h *DbHandler) Select(statement, structType string, args []interface{}) ([]interface{}, error) {
 	ctx := context.Background()
+	var err error
 
 	params := make([]interface{}, len(args))
 	for i := range args {
 		params[i] = args[i]
 	}
 
-	rows, err := h.Db.QueryContext(ctx, statement, params...)
+	conn, err := h.DB.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conn.Close()
+
+	rows, err := conn.QueryContext(ctx, statement, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -247,24 +243,23 @@ func (h *DbHandler) Select(statement, structType string, args []interface{}) ([]
 		return result, nil
 	}
 
-	// If the database is being written to ensure to check for Close
-	// errors that may be returned from the driver. The query may
-	// encounter an auto-commit error and be forced to rollback changes.
-	err = rows.Close()
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 
-func (h *DbHandler) SelectTransaction(statement, structType string, args []interface{}, tx *sql.Tx, ctx *context.Context) ([]interface{}, error) {
+func (h *DbHandler) SelectTransaction(statement, structType string, args []interface{}, tx *sql.Tx) ([]interface{}, error) {
+	ctx := context.Background()
+	var err error
+
+	if err != nil {
+		return nil, fmt.Errorf("Error executing statement: %s" + err.Error())
+	}
+
 	params := make([]interface{}, len(args))
 	for i := range args {
 		params[i] = args[i]
 	}
 
-	rows, err := tx.QueryContext(*ctx, statement, params...)
+	rows, err := tx.QueryContext(ctx, statement, params...)
 	if err != nil {
 		return nil, err
 	}
