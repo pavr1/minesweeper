@@ -70,7 +70,7 @@ func (g *Gate) ValidateLogin(user models.User) (*models.User, error) {
 	return result, nil
 }
 
-func (g *Gate) CreateGame(game *models.Game) (*map[string]models.Spot, error) {
+func (g *Gate) CreateGame(game *models.Game) (*map[string]*models.Spot, error) {
 	if game.UserId == 0 {
 		return nil, fmt.Errorf("user id required")
 	}
@@ -107,7 +107,7 @@ func (g *Gate) CreateGame(game *models.Game) (*map[string]models.Spot, error) {
 	return spots, nil
 }
 
-func (g *Gate) insertSpots(spots *map[string]models.Spot, tx *sql.Tx) error {
+func (g *Gate) insertSpots(spots *map[string]*models.Spot, tx *sql.Tx) error {
 	for key, spot := range *spots {
 		err := spot.Insert(g.DbHandler, tx)
 
@@ -139,24 +139,21 @@ func (g *Gate) GetSingleGame(gameId int64) (*models.Game, error) {
 		return nil, err
 	}
 
-	spots := make(map[string]models.Spot)
-	game.Spots = spots
 	spotList, err := models.GetSpotsByGameId(g.DbHandler, gameId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range spotList {
-		spot := spotList[i]
+	spots := make(map[string]*models.Spot)
+	spotListVal := *spotList
+	for i := range spotListVal {
+		spot := spotListVal[i]
 		id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
 
-		game.Spots[id] = spot
+		spots[id] = &spot
 	}
-
-	if err != nil {
-		return nil, err
-	}
+	game.Spots = &spots
 
 	return game, nil
 }

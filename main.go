@@ -217,7 +217,7 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 			t.Execute(w, game)
 		} else {
 			game.Message = "Game Created Successfully "
-			game.Spots = *newSpots
+			game.Spots = newSpots
 
 			t, err := template.ParseFiles("ui/game.html")
 			if err != nil {
@@ -274,7 +274,7 @@ func LoadPendingGame(w http.ResponseWriter, r *http.Request) {
 			game.Message = err.Error()
 		} else {
 			game.Message = "Game Created Successfully "
-			game.Spots = *newSpots
+			game.Spots = newSpots
 
 			t, err := template.ParseFiles("ui/game.html")
 			if err != nil {

@@ -18,7 +18,7 @@ type Game struct {
 	Rows         int
 	Columns      int
 	Mines        int
-	Spots        map[string]Spot
+	Spots        *map[string]*Spot
 	Message      string
 }
 
@@ -39,7 +39,7 @@ func (g *Game) Create(handler *dbhandler.DbHandler) (int64, error) {
 	return id, nil
 }
 
-func (g *Game) GenerateGrid() (*map[string]Spot, error) {
+func (g *Game) GenerateGrid() (*map[string]*Spot, error) {
 	rows := g.Rows
 	columns := g.Columns
 	mines := g.Mines
@@ -50,21 +50,23 @@ func (g *Game) GenerateGrid() (*map[string]Spot, error) {
 		return nil, fmt.Errorf("too many mines, please decrease mine amount")
 	}
 
-	spots := make(map[string]Spot)
+	spots := make(map[string]*Spot)
 	x := 0
 	y := 0
 
 	for {
+		nearSpots := make(map[string]*Spot)
+
 		spot := Spot{
 			GameId:    g.GameId,
-			Value:     "", //pending for now. We need to loop through all near spots to count
+			Value:     "",
 			X:         x,
 			Y:         y,
-			NearSpots: make(map[string]Spot), //pending, loop throug all near spots to get ids
+			NearSpots: &nearSpots,
 			Status:    "Closed",
 		}
 
-		spots[strconv.Itoa(x)+","+strconv.Itoa(y)] = spot
+		spots[strconv.Itoa(x)+","+strconv.Itoa(y)] = &spot
 
 		y++
 
@@ -83,8 +85,10 @@ func (g *Game) GenerateGrid() (*map[string]Spot, error) {
 	var wg sync.WaitGroup
 	for _, value := range spots {
 		wg.Add(1)
-		go func(spot Spot, spots map[string]Spot, wg *sync.WaitGroup) {
-			spot.NearSpots = loadNearSpots(spot.X, spot.Y, rows, columns, spots)
+		go func(spot *Spot, spots map[string]*Spot, wg *sync.WaitGroup) {
+			nearSpots := loadNearSpots(spot.X, spot.Y, rows, columns, spots)
+			spot.NearSpots = &nearSpots
+			spot.Value = spot.GetSpotNearMines()
 			wg.Done()
 		}(value, spots, &wg)
 	}
@@ -93,7 +97,7 @@ func (g *Game) GenerateGrid() (*map[string]Spot, error) {
 	return &spots, nil
 }
 
-func (g *Game) setupMines(rows, coulmns, mines int, spots *map[string]Spot) {
+func (g *Game) setupMines(rows, coulmns, mines int, spots *map[string]*Spot) {
 	for {
 		randX := rand.Intn(rows)
 		randY := rand.Intn(coulmns)
@@ -117,8 +121,8 @@ func (g *Game) setupMines(rows, coulmns, mines int, spots *map[string]Spot) {
 	}
 }
 
-func loadNearSpots(x, y, rows, colums int, spots map[string]Spot) map[string]Spot {
-	nearSpots := make(map[string]Spot)
+func loadNearSpots(x, y, rows, colums int, spots map[string]*Spot) map[string]*Spot {
+	nearSpots := make(map[string]*Spot)
 
 	var id string
 	auxX := x - 1

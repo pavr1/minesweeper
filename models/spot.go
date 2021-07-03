@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"minesweeper/dbhandler"
+	"strconv"
 )
 
 type Spot struct {
@@ -11,7 +12,7 @@ type Spot struct {
 	Value     string
 	X         int
 	Y         int
-	NearSpots map[string]Spot
+	NearSpots *map[string]*Spot
 	Status    string
 }
 
@@ -24,7 +25,7 @@ func (s *Spot) Insert(handler *dbhandler.DbHandler, tx *sql.Tx) error {
 
 	nearSpots := ""
 
-	for key := range s.NearSpots {
+	for key := range *s.NearSpots {
 		nearSpots += key + "|"
 	}
 
@@ -42,7 +43,7 @@ func (s *Spot) Insert(handler *dbhandler.DbHandler, tx *sql.Tx) error {
 	return nil
 }
 
-func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) ([]Spot, error) {
+func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) (*[]Spot, error) {
 	args := make([]interface{}, 0)
 	args = append(args, gameId)
 
@@ -54,6 +55,7 @@ func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) ([]Spot, error
 	}
 
 	for _, spot := range r {
+		nearSpots := make(map[string]*Spot)
 		dbspot := spot.(dbhandler.DbSpot)
 		results = append(results, Spot{
 			SpotId:    dbspot.SpotId,
@@ -61,10 +63,30 @@ func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) ([]Spot, error
 			Value:     dbspot.Value,
 			X:         dbspot.X,
 			Y:         dbspot.Y,
-			NearSpots: make(map[string]Spot),
+			NearSpots: &nearSpots,
 			Status:    dbspot.Status,
 		})
 	}
 
-	return results, nil
+	return &results, nil
+}
+
+func (s *Spot) GetSpotNearMines() string {
+	if s.Value == "M" {
+		return s.Value
+	}
+
+	amountOfNearMines := 0
+
+	for _, spot := range *s.NearSpots {
+		if spot.Value == "M" {
+			amountOfNearMines++
+		}
+	}
+
+	if amountOfNearMines == 0 {
+		return ""
+	} else {
+		return strconv.Itoa(amountOfNearMines)
+	}
 }
