@@ -5,6 +5,10 @@
             table, th, td {
               border: 1px solid black;
             }
+            .tdSize{
+                width: 50px;
+                height: 50px;
+            }
             table.center {
               margin-left: auto;
               margin-right: auto;
@@ -33,19 +37,18 @@
             {{range $index, $page := .Spots}}
                 {{ $c := $index }}
                 {{ $x := slice $c  0 1}}
-                {{ $y := slice $c  1 1}}
+                {{ $y := slice $c  2 3}}
 
                 {{if eq $x $currentX}}
-                    <td>{{.Value}}</td>
+                    <td class="tdSize">{{.Value}}</td>
                 {{else}}
                     {{$currentX = $x}}
                     </tr>
                     <tr>
-                        <td>{{.Value}}</td>
+                        <td class="tdSize">{{.Value}}</td>
                 {{ end}}
-                XXX: {{$x}}-{{.Value}}
+                XXX: {{$c}} - {{$x}},{{$y}}-{{.Value}}
             {{ end}}
-            <td></td>
             </tr>
         </table>
     </body>
