@@ -26,12 +26,6 @@ func main() {
 
 	defer g.DbHandler.DB.Close()
 
-	// funcTemplate, err = template.New("ui/game.html").Funcs(template.FuncMap{
-	// 	"increase": func(i int) int {
-	// 		return -1
-	// 	},
-	// }).ParseFiles("ui/game.html")
-
 	if err != nil {
 		panic(err.Error)
 	}
@@ -185,17 +179,8 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 
 			t.Execute(w, game)
 		} else {
-			spots := make(map[string]models.Spot)
-			spotListVal := *newSpots
-			for i := range spotListVal {
-				spot := spotListVal[i]
-				id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
-
-				spots[id] = *spot
-			}
-
 			game.Message = "Game Created Successfully "
-			game.Spots = spots
+			game.Spots = *newSpots
 
 			t, err := template.ParseFiles("ui/game.html")
 			if err != nil {
@@ -285,6 +270,7 @@ func openSpot(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		gameId, _ := strconv.Atoi(r.FormValue("gameId"))
 		spotId, _ := strconv.Atoi(r.FormValue("spotId"))
+		status := r.FormValue("status")
 
 		getLoggedinUser(w)
 
@@ -297,33 +283,28 @@ func openSpot(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				game.Message = err.Error()
 			} else {
-				spotsMap := make(map[string]models.Spot)
-
-				for _, spot := range *spots {
-					id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
-
-					spotsMap[id] = spot
-				}
-
-				game.Spots = spotsMap
+				game.Spots = spots
 				spot, err := models.GetSpotById(g.DbHandler, int64(spotId))
 
 				if err != nil {
 					game.Message = err.Error()
 				} else {
-					err = spot.OpenSpot(g.DbHandler)
-					spotsMap := make(map[string]models.Spot)
-
-					for _, spot := range *spots {
-						id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
-
-						spotsMap[id] = spot
-					}
-
-					game.Spots = spotsMap
+					err = spot.ProcessSpot(g.DbHandler, game.Rows, game.Columns, status)
 
 					if err != nil {
 						game.Message = err.Error()
+					} else {
+						spots, err = models.GetSpotsByGameId(g.DbHandler, game.GameId)
+
+						if err != nil {
+							game.Message = err.Error()
+						} else {
+							game.Spots = spots
+
+							if err != nil {
+								game.Message = err.Error()
+							}
+						}
 					}
 				}
 			}

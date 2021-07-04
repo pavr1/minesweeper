@@ -50,28 +50,30 @@ type DbSpot struct {
 	Status    string
 }
 
-func InitConnection() (*DbHandler, error) {
-	connString := fmt.Sprintf("server=%s;database=%s;port=%d;Trusted_Connection=true", server, databasename, port)
+func (h *DbHandler) CheckConnection() error {
+	if h.DB == nil || h.DB.Ping() != nil {
+		connString := fmt.Sprintf("server=%s;database=%s;port=%d;Trusted_Connection=true", server, databasename, port)
 
-	db, err := sql.Open("sqlserver", connString)
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
+		db, err := sql.Open("sqlserver", connString)
+		db.SetMaxOpenConns(10)
+		db.SetMaxIdleConns(5)
+		db.SetConnMaxLifetime(5 * time.Minute)
 
-	if err != nil {
-		return nil, fmt.Errorf("Error creating db instance: %s" + err.Error())
+		if err != nil {
+			return fmt.Errorf("Error creating db instance: %s" + err.Error())
+		}
+
+		h.DB = db
 	}
 
-	handler := &DbHandler{
-		DB: db,
-	}
-
-	return handler, nil
+	return nil
 }
 
 func (h *DbHandler) Execute(statement string, args []interface{}) (int64, error) {
 	ctx := context.Background()
 	var err error
+
+	h.CheckConnection()
 
 	conn, err := h.DB.Conn(ctx)
 
@@ -133,6 +135,8 @@ func (h *DbHandler) Select(statement, structType string, args []interface{}) ([]
 	for i := range args {
 		params[i] = args[i]
 	}
+
+	h.CheckConnection()
 
 	conn, err := h.DB.Conn(ctx)
 	if err != nil {

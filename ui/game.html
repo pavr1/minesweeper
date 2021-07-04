@@ -3,6 +3,7 @@
         <title>Game</title>
         <style>
             table, th, td {
+                border-radius: 8px;
             }
             td:hover {
                 background-color: #f5f5f5;
@@ -24,21 +25,89 @@
                 margin-left: auto;
                 margin-right: auto;
             }
+            .menu{
+                text-align: left;
+                margin: 5px;
+            }
+            div.menu:hover {
+                background-color: lightgray;
+                cursor: pointer;
+            }
+            .red{
+                color: red !important;
+            }
+            .failedSpot{
+                background-color: red;
+            }
+            .fixed-padding{
+                padding-top: 7px !important; 
+                padding-bottom: 7px !important;
+            }
         </style>
+        
+
+        <style>
+            .dropbtn {
+              background-color: lightgrey;
+              color: white;
+              padding: 16px;
+              font-size: 16px;
+              border: none;
+              cursor: pointer;
+              border-radius: 5px;
+            }
+            
+            .dropdown {
+              position: relative;
+              display: inline-block;
+            }
+            
+            .dropdown-content {
+              display: none;
+              position: absolute;
+              background-color: #f9f9f9;
+              min-width: 160px;
+              box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+              z-index: 1;
+            }
+            
+            .dropdown-content a {
+              color: black;
+              padding: 12px 16px;
+              text-decoration: none;
+              display: block;
+            }
+            
+            .dropdown-content a:hover {background-color: #f1f1f1}
+            
+            .dropdown:hover .dropdown-content {
+              display: block;
+            }
+            
+            .dropdown:hover .dropbtn {
+              background-color: lightslategray;
+            }
+        </style>
+
+
         <script>
-            function view(spot){
-                window.location.href = "/openSpot?gameId="+1+"&spotId="+spot.id;
+            function view(spot, id, status){
+                gameId = document.getElementById('hdd-gameId').value;
+
+                window.location.href = "/openSpot?gameId="+gameId+"&spotId="+id+"&status=" + status;
             }
         </script>
     </head>
     <body>
         <h2>{{.Message}}</h2>
         <h3><a href="/menu"><<</a> GAME</h3>
+        <input id="hdd-gameId" type="hidden" value="{{.GameId}}"/>
         Rows {{.Rows}}
         Columns {{.Columns}}
         Mines {{.Mines}}
+        <div>&#128163</div>
 
-        <table>
+        <table >
             {{$currentX := "0"}}
             <tr>
             {{range $index, $page := .Spots}}
@@ -48,21 +117,99 @@
 
                 {{if eq $x $currentX}}
                     {{if eq .Status "Closed"}}
-                        <td id="{{.SpotId}}" onclick="view(this)" class="tdDefault outsetBorder {{$x}},{{$y}}"></td>
+                        <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                            <div class="dropdown">
+                                <button class="dropbtn"></button>
+                                    <div class="dropdown-content">
+                                    <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                    <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                    <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                </div>
+                            </div>
+                        </td>
                     {{else}}
-                        <td id="{{.SpotId}}" onclick="view(this)" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
+                        {{if eq .Status "Open"}}
+                            {{if eq .Value "E"}}
+                            <td id="{{.SpotId}}" class="tdDefault insetBorder failedSpot {{$x}},{{$y}}">&#128163</td>
+                            {{else}}
+                                <td id="{{.SpotId}}" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
+                            {{end}}
+                        {{else}}
+                            {{if eq .Status "RedFlagged"}}
+                                <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                                    <div class="dropdown">
+                                        <button class="dropbtn fixed-padding red"><strong>!</strong></button>
+                                            <div class="dropdown-content">
+                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            {{else}}
+                                {{if eq .Status "QuestionFlagged"}}
+                                    <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                                        <div class="dropdown">
+                                            <button class="dropbtn fixed-padding"><strong>?</strong></button>
+                                                <div class="dropdown-content">
+                                                <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                                <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                                <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                {{end}}
+                            {{end}}
+                        {{end}}
                     {{end}}
                 {{else}}
                     {{$currentX = $x}}
                     </tr>
                     <tr>
                         {{if eq .Status "Closed"}}
-                            <td id="{{.SpotId}}" onclick="view(this)"" class="tdDefault outsetBorder {{$x}},{{$y}}"></td>
+                        <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                            <div class="dropdown">
+                                <button class="dropbtn"></button>
+                                    <div class="dropdown-content">
+                                    <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                    <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                    <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                </div>
+                            </div>
+                        </td>
+                    {{else}}
+                        {{if eq .Status "Open"}}
+                            <td id="{{.SpotId}}" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
                         {{else}}
-                            <td id="{{.SpotId}}" onclick="view(this)" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
+                            {{if eq .Status "RedFlagged"}}
+                                <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                                    <div class="dropdown">
+                                        <button class="dropbtn fixed-padding red"><strong>!</strong></button>
+                                            <div class="dropdown-content">
+                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            {{else}}
+                                {{if eq .Status "QuestionFlagged"}}
+                                    <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                                        <div class="dropdown">
+                                            <button class="dropbtn fixed-padding"><strong>?</strong></button>
+                                                <div class="dropdown-content">
+                                                <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                                <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                                <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                {{end}}
+                            {{end}}
                         {{end}}
+                    {{end}}
                 {{ end}}
-                <!-- XXX: {{$c}} - {{$x}},{{$y}}-{{.Value}} -->
+                <!-- Index: {{$c}} -> X: {{$x}}, Y: {{$y}} - Value: {{.Value}} - Status: {{.Status}} -->
             {{ end}}
             </tr>
         </table>

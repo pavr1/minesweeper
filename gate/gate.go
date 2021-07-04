@@ -7,7 +7,6 @@ import (
 	"minesweeper/ccache"
 	"minesweeper/dbhandler"
 	"minesweeper/models"
-	"strconv"
 )
 
 type Gate struct {
@@ -16,16 +15,12 @@ type Gate struct {
 }
 
 func Start() (*Gate, error) {
-	handler, err := dbhandler.InitConnection()
-
-	if err != nil {
-		return nil, err
-	}
-
 	gate := &Gate{
-		DbHandler: handler,
+		DbHandler: &dbhandler.DbHandler{},
 		Cache:     ccache.New(),
 	}
+
+	gate.DbHandler.CheckConnection()
 
 	return gate, nil
 }
@@ -136,24 +131,16 @@ func (g *Gate) GetSingleGame(gameId int64) (*models.Game, error) {
 	game, err := models.GetSingleGame(g.DbHandler, gameId)
 
 	if err != nil {
-		return nil, err
+		return &models.Game{}, err
 	}
 
 	spotList, err := models.GetSpotsByGameId(g.DbHandler, gameId)
 
 	if err != nil {
-		return nil, err
+		return &models.Game{}, err
 	}
 
-	spots := make(map[string]models.Spot)
-	spotListVal := *spotList
-	for i := range spotListVal {
-		spot := spotListVal[i]
-		id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
-
-		spots[id] = spot
-	}
-	game.Spots = spots
+	game.Spots = spotList
 
 	return game, nil
 }

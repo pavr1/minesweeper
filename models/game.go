@@ -18,7 +18,7 @@ type Game struct {
 	Rows         int
 	Columns      int
 	Mines        int
-	Spots        map[string]Spot
+	Spots        map[string]*Spot
 	Message      string
 }
 
@@ -62,7 +62,7 @@ func (g *Game) GenerateGrid() (*map[string]*Spot, error) {
 			Value:     "",
 			X:         x,
 			Y:         y,
-			NearSpots: &nearSpots,
+			NearSpots: nearSpots,
 			Status:    "Closed",
 		}
 
@@ -86,8 +86,8 @@ func (g *Game) GenerateGrid() (*map[string]*Spot, error) {
 	for _, value := range spots {
 		wg.Add(1)
 		go func(spot *Spot, spots map[string]*Spot, wg *sync.WaitGroup) {
-			spot.LoadNearSpots(rows, columns, spots)
-			spot.Value = spot.GetSpotNearMines()
+			spot.GetNearSpots(rows, columns, spots)
+			spot.Value = spot.GetMinesAround()
 			wg.Done()
 		}(value, spots, &wg)
 	}
@@ -107,7 +107,7 @@ func (g *Game) setupMines(rows, coulmns, mines int, spots *map[string]*Spot) {
 		spot := val[id]
 
 		if spot.Value == "" {
-			spot.Value = "M"
+			spot.Value = "&#128163"
 
 			val[id] = spot
 
@@ -152,13 +152,13 @@ func GetSingleGame(handler *dbhandler.DbHandler, gameId int64) (*Game, error) {
 	args := make([]interface{}, 0)
 	args = append(args, gameId)
 
+	var game = Game{}
+
 	r, err := handler.Select(dbhandler.SELECT_GAME_BY_ID, "Game", args)
 
 	if err != nil {
-		return nil, err
+		return &game, err
 	}
-
-	var game Game
 
 	for _, g := range r {
 		dbgame := g.(dbhandler.DbGame)

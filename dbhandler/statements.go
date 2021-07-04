@@ -71,3 +71,8 @@ const UPDATE_SPOT_STATUS = `
 	UPDATE [minesweeper].[dbo].[Spot] 
 		SET Status = @p1
 	WHERE SpotId = @p2`
+
+const UPDATE_SPOT_VALUE = `
+	UPDATE [minesweeper].[dbo].[Spot] 
+		SET Value = @p1
+	WHERE SpotId = @p2`

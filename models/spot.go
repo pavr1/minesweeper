@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"minesweeper/dbhandler"
 	"strconv"
 )
@@ -12,7 +13,7 @@ type Spot struct {
 	Value     string
 	X         int
 	Y         int
-	NearSpots *map[string]*Spot
+	NearSpots map[string]*Spot
 	Status    string
 }
 
@@ -25,7 +26,7 @@ func (s *Spot) Insert(handler *dbhandler.DbHandler, tx *sql.Tx) error {
 
 	nearSpots := ""
 
-	for key := range *s.NearSpots {
+	for key := range s.NearSpots {
 		nearSpots += key + "|"
 	}
 
@@ -43,32 +44,37 @@ func (s *Spot) Insert(handler *dbhandler.DbHandler, tx *sql.Tx) error {
 	return nil
 }
 
-func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) (*[]Spot, error) {
+func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) (map[string]*Spot, error) {
 	args := make([]interface{}, 0)
 	args = append(args, gameId)
 
-	results := make([]Spot, 0)
 	r, err := handler.Select(dbhandler.SELECT_SPOTS_BY_GAME_ID, "Spot", args)
 
 	if err != nil {
 		return nil, err
 	}
 
-	for _, spot := range r {
+	spotsMap := make(map[string]*Spot)
+
+	for _, s := range r {
 		nearSpots := make(map[string]*Spot)
-		dbspot := spot.(dbhandler.DbSpot)
-		results = append(results, Spot{
+		dbspot := s.(dbhandler.DbSpot)
+		id := strconv.Itoa(dbspot.X) + "," + strconv.Itoa(dbspot.Y)
+
+		spot := Spot{
 			SpotId:    dbspot.SpotId,
 			GameId:    dbspot.GameId,
 			Value:     dbspot.Value,
 			X:         dbspot.X,
 			Y:         dbspot.Y,
-			NearSpots: &nearSpots,
+			NearSpots: nearSpots,
 			Status:    dbspot.Status,
-		})
+		}
+
+		spotsMap[id] = &spot
 	}
 
-	return &results, nil
+	return spotsMap, nil
 }
 
 func GetSpotById(handler *dbhandler.DbHandler, spotId int64) (*Spot, error) {
@@ -91,7 +97,7 @@ func GetSpotById(handler *dbhandler.DbHandler, spotId int64) (*Spot, error) {
 			Value:     dbspot.Value,
 			X:         dbspot.X,
 			Y:         dbspot.Y,
-			NearSpots: &nearSpots,
+			NearSpots: nearSpots,
 			Status:    dbspot.Status,
 		}
 
@@ -101,15 +107,15 @@ func GetSpotById(handler *dbhandler.DbHandler, spotId int64) (*Spot, error) {
 	return spot, nil
 }
 
-func (s *Spot) GetSpotNearMines() string {
-	if s.Value == "M" {
+func (s *Spot) GetMinesAround() string {
+	if s.Value == "&#128163" {
 		return s.Value
 	}
 
 	amountOfNearMines := 0
 
-	for _, spot := range *s.NearSpots {
-		if spot.Value == "M" {
+	for _, spot := range s.NearSpots {
+		if spot.Value == "&#128163" {
 			amountOfNearMines++
 		}
 	}
@@ -121,35 +127,90 @@ func (s *Spot) GetSpotNearMines() string {
 	}
 }
 
-func (s *Spot) OpenSpot(handler *dbhandler.DbHandler) error {
+func (s *Spot) ProcessSpot(handler *dbhandler.DbHandler, rows, colums int, status string) error {
 	args := make([]interface{}, 0)
-	args = append(args, "Open")
-	args = append(args, s.SpotId)
 
-	_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
+	if status == "Open" {
+		args = append(args, "Open")
+		args = append(args, s.SpotId)
 
-	if err != nil {
-		return err
-	}
+		_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
 
-	if s.Value == "" {
-		for _, spot := range *s.NearSpots {
-			args := make([]interface{}, 0)
-			args = append(args, "Open")
-			args = append(args, spot.SpotId)
+		s.Status = "Open"
 
-			_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
+		if err != nil {
+			return err
+		}
+
+		if len(s.NearSpots) == 0 {
+			spots, err := GetSpotsByGameId(handler, s.GameId)
 
 			if err != nil {
 				return err
 			}
+
+			s.NearSpots = spots
+			s.GetNearSpots(rows, colums, spots)
 		}
+
+		if s.Value == "" {
+			for _, spot := range s.NearSpots {
+				args := make([]interface{}, 0)
+				args = append(args, "Open")
+				args = append(args, spot.SpotId)
+
+				_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
+
+				if err != nil {
+					return err
+				}
+			}
+		} else if s.Value == "&#128163" {
+			args := make([]interface{}, 0)
+			args = append(args, "E")
+			args = append(args, s.SpotId)
+
+			_, err := handler.Execute(dbhandler.UPDATE_SPOT_VALUE, args)
+			if err != nil {
+				return err
+			}
+
+			//game over
+			spots, err := GetSpotsByGameId(handler, s.GameId)
+			if err != nil {
+				return err
+			}
+
+			for _, spot := range spots {
+				args := make([]interface{}, 0)
+				args = append(args, "Open")
+				args = append(args, spot.SpotId)
+
+				_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
+
+				if err != nil {
+					return err
+				}
+			}
+
+			return fmt.Errorf("Game Over!")
+		}
+	} else {
+		args = append(args, status)
+		args = append(args, s.SpotId)
+
+		_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	return nil
 }
 
-func (s *Spot) LoadNearSpots(rows, colums int, spots map[string]*Spot) {
+func (s *Spot) GetNearSpots(rows, colums int, spots map[string]*Spot) {
 	nearSpots := make(map[string]*Spot)
 
 	var id string
@@ -212,5 +273,5 @@ func (s *Spot) LoadNearSpots(rows, colums int, spots map[string]*Spot) {
 		nearSpots[id] = spots[id]
 	}
 
-	s.NearSpots = &nearSpots
+	s.NearSpots = nearSpots
 }
