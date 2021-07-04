@@ -57,7 +57,7 @@ func (h *DbHandler) CheckConnection() error {
 		db, err := sql.Open("sqlserver", connString)
 		db.SetMaxOpenConns(10)
 		db.SetMaxIdleConns(5)
-		db.SetConnMaxLifetime(5 * time.Minute)
+		db.SetConnMaxLifetime(10 * time.Minute)
 
 		if err != nil {
 			return fmt.Errorf("Error creating db instance: %s" + err.Error())

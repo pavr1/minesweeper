@@ -7,6 +7,8 @@ import (
 	"minesweeper/gate"
 	"minesweeper/models"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"text/template"
 )
@@ -30,6 +32,25 @@ func main() {
 		panic(err.Error)
 	}
 
+	// router := http.NewServeMux()
+	// router.HandleFunc("/", start)
+	// router.HandleFunc("/signup", singup)
+	// router.HandleFunc("/login", login)
+	// router.HandleFunc("/logout", logout)
+	// router.HandleFunc("/menu", menu)
+	// router.HandleFunc("/creategame", createGame)
+	// router.HandleFunc("/loadPendingGame", loadPendingGame)
+	// router.HandleFunc("/openSpot", openSpot)
+
+	// server := &http.Server{
+	// 	Addr:         ":8080",
+	// 	ReadTimeout:  5 * time.Second,
+	// 	WriteTimeout: 10 * time.Second,
+	// 	IdleTimeout:  15 * time.Second,
+	// }
+
+	// server.ListenAndServe()
+
 	http.HandleFunc("/", start)
 	http.HandleFunc("/signup", singup)
 	http.HandleFunc("/login", login)
@@ -42,6 +63,14 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
 	fmt.Println("Server started at port 8080")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+		fmt.Println("SERVER DOWN")
+	}()
 
 	select {}
 }

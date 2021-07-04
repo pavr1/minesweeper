@@ -3,15 +3,19 @@
         <title>MENU</title>
     </head>
     <body>
-        <h2>MENU</h2><h3>{{.Message}}</h3>
-        <a href='/logout'>Logout</a>
+        <h2>MENU <a href='/logout'>Logout</a></h2><h3>{{.Message}}</h3> 
 
         <table style="width: 100%;border:1">
             <tr>
-                <td><a href="./creategame"><h3>Create New Game</h3></a></td>
+                <td>
+                    <button><a href="./creategame"><h3>Create New Game</h3></a></button>
+                </td>
             </tr>
             <tr>
-                <td><h3>Pending Games</h3></td>
+                <td>
+                    </br>
+                    <h3>Created Games</h3>
+                </td>
             </tr>
             {{ range .PendingGames}}
                 <tr>
@@ -19,9 +23,6 @@
                 </tr>
             {{ end}}
 
-            <tr>
-                <td><a href="./login">...</a></td>
-            </tr>
         </table>
     </body>
 </html>
