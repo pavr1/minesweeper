@@ -209,3 +209,17 @@ func GetLatestGame(handler *dbhandler.DbHandler, userId int64) (*Game, error) {
 
 	return &game, nil
 }
+
+func (g *Game) UpdateStatus(handler *dbhandler.DbHandler) (int64, error) {
+	args := make([]interface{}, 0)
+	args = append(args, g.Status)
+	args = append(args, g.GameId)
+
+	id, err := handler.Execute(dbhandler.UPDATE_GAME_STATUS, args)
+
+	if err != nil {
+		return -1, err
+	}
+
+	return id, nil
+}

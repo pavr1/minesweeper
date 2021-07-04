@@ -39,9 +39,24 @@
             .failedSpot{
                 background-color: red;
             }
+            .right-red-flag{
+                background-color: lightgreen;
+            }
+            .wrong-red-flag{
+                background-color: lightcoral;
+            }
+            .right-question-flag{
+                background-color: lightskyblue;
+            }
+            .wrong-question-flag{
+                background-color: lightsalmon;
+            }
             .fixed-padding{
                 padding-top: 7px !important; 
                 padding-bottom: 7px !important;
+            }
+            .color-board{
+                padding: 5px;
             }
         </style>
         
@@ -106,6 +121,14 @@
         Columns {{.Columns}}
         Mines {{.Mines}}
 
+        <table>
+            <tr>
+                <td class="color-board right-red-flag">Right red flags</td>
+                <td class="color-board right-question-flag">Right question flags</td>
+                <td class="color-board wrong-red-flag">Wrong red flags</td>
+                <td class="color-board wrong-question-flag">Wrong question flags</td>
+            </tr>
+        </table>
         <table >
             {{$currentX := "0"}}
             <tr>
@@ -134,22 +157,24 @@
                                 <td id="{{.SpotId}}" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
                             {{end}}
                         {{else}}
-                            {{if eq .Status "RedFlagged"}}
-                                <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
-                                    <div class="dropdown">
-                                        <button class="dropbtn fixed-padding red"><strong>!</strong></button>
-                                            <div class="dropdown-content">
-                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
-                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
-                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
-                                        </div>
-                                    </div>
-                                </td>
+                            {{if eq .Status "ROpen"}}
+                                {{if eq .Value "&#128163"}}
+                                    <td id="{{.SpotId}}" class="tdDefault insetBorder right-red-flag {{$x}},{{$y}}">&#128163</td>
+                                {{else}}
+                                    <td id="{{.SpotId}}" class="tdDefault insetBorder wrong-red-flag {{$x}},{{$y}}">{{.Value}}</td>
+                                {{end}}
                             {{else}}
-                                {{if eq .Status "QuestionFlagged"}}
+                                {{if eq .Status "QOpen"}}
+                                    {{if eq .Value "&#128163"}}
+                                        <td id="{{.SpotId}}" class="tdDefault insetBorder right-question-flag {{$x}},{{$y}}">&#128163</td>
+                                    {{else}}
+                                        <td id="{{.SpotId}}" class="tdDefault insetBorder wrong-question-flag {{$x}},{{$y}}">{{.Value}}</td>
+                                    {{end}}
+                                {{else}}
+                                    {{if eq .Status "RedFlagged"}}
                                     <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
                                         <div class="dropdown">
-                                            <button class="dropbtn fixed-padding"><strong>?</strong></button>
+                                            <button class="dropbtn fixed-padding red"><strong>!</strong></button>
                                                 <div class="dropdown-content">
                                                 <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
                                                 <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
@@ -157,6 +182,20 @@
                                             </div>
                                         </div>
                                     </td>
+                                    {{else}}
+                                        {{if eq .Status "QuestionFlagged"}}
+                                            <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                                                <div class="dropdown">
+                                                    <button class="dropbtn fixed-padding"><strong>?</strong></button>
+                                                        <div class="dropdown-content">
+                                                        <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                                        <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                                        <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        {{end}}
+                                    {{end}}
                                 {{end}}
                             {{end}}
                         {{end}}
@@ -165,7 +204,7 @@
                     {{$currentX = $x}}
                     </tr>
                     <tr>
-                        {{if eq .Status "Closed"}}
+                    {{if eq .Status "Closed"}}
                         <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
                             <div class="dropdown">
                                 <button class="dropbtn"></button>
@@ -178,24 +217,30 @@
                         </td>
                     {{else}}
                         {{if eq .Status "Open"}}
-                            <td id="{{.SpotId}}" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
-                        {{else}}
-                            {{if eq .Status "RedFlagged"}}
-                                <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
-                                    <div class="dropdown">
-                                        <button class="dropbtn fixed-padding red"><strong>!</strong></button>
-                                            <div class="dropdown-content">
-                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
-                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
-                                            <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
-                                        </div>
-                                    </div>
-                                </td>
+                            {{if eq .Value "E"}}
+                                <td id="{{.SpotId}}" class="tdDefault insetBorder failedSpot {{$x}},{{$y}}">&#128163</td>
                             {{else}}
-                                {{if eq .Status "QuestionFlagged"}}
+                                <td id="{{.SpotId}}" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
+                            {{end}}
+                        {{else}}
+                            {{if eq .Status "ROpen"}}
+                                {{if eq .Value "&#128163"}}
+                                    <td id="{{.SpotId}}" class="tdDefault insetBorder right-red-flag {{$x}},{{$y}}">&#128163</td>
+                                {{else}}
+                                    <td id="{{.SpotId}}" class="tdDefault insetBorder wrong-red-flag {{$x}},{{$y}}">{{.Value}}</td>
+                                {{end}}
+                            {{else}}
+                                {{if eq .Status "QOpen"}}
+                                    {{if eq .Value "&#128163"}}
+                                        <td id="{{.SpotId}}" class="tdDefault insetBorder right-red-flag {{$x}},{{$y}}">&#128163</td>
+                                    {{else}}
+                                        <td id="{{.SpotId}}" class="tdDefault insetBorder wrong-question-flag {{$x}},{{$y}}">{{.Value}}</td>
+                                    {{end}}
+                                {{else}}
+                                    {{if eq .Status "RedFlagged"}}
                                     <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
                                         <div class="dropdown">
-                                            <button class="dropbtn fixed-padding"><strong>?</strong></button>
+                                            <button class="dropbtn fixed-padding red"><strong>!</strong></button>
                                                 <div class="dropdown-content">
                                                 <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
                                                 <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
@@ -203,6 +248,20 @@
                                             </div>
                                         </div>
                                     </td>
+                                    {{else}}
+                                        {{if eq .Status "QuestionFlagged"}}
+                                            <td id="{{.SpotId}}" class="tdDefault outsetBorder {{$x}},{{$y}}">
+                                                <div class="dropdown">
+                                                    <button class="dropbtn fixed-padding"><strong>?</strong></button>
+                                                        <div class="dropdown-content">
+                                                        <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'Open')">Open</div>
+                                                        <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'RedFlagged')">Red Flag</div>
+                                                        <div class="menu" onclick="onclick=view(this, '{{.SpotId}}', 'QuestionFlagged')">Question Mark</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        {{end}}
+                                    {{end}}
                                 {{end}}
                             {{end}}
                         {{end}}

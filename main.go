@@ -7,8 +7,6 @@ import (
 	"minesweeper/gate"
 	"minesweeper/models"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
 	"text/template"
 )
@@ -32,25 +30,6 @@ func main() {
 		panic(err.Error)
 	}
 
-	// router := http.NewServeMux()
-	// router.HandleFunc("/", start)
-	// router.HandleFunc("/signup", singup)
-	// router.HandleFunc("/login", login)
-	// router.HandleFunc("/logout", logout)
-	// router.HandleFunc("/menu", menu)
-	// router.HandleFunc("/creategame", createGame)
-	// router.HandleFunc("/loadPendingGame", loadPendingGame)
-	// router.HandleFunc("/openSpot", openSpot)
-
-	// server := &http.Server{
-	// 	Addr:         ":8080",
-	// 	ReadTimeout:  5 * time.Second,
-	// 	WriteTimeout: 10 * time.Second,
-	// 	IdleTimeout:  15 * time.Second,
-	// }
-
-	// server.ListenAndServe()
-
 	http.HandleFunc("/", start)
 	http.HandleFunc("/signup", singup)
 	http.HandleFunc("/login", login)
@@ -64,20 +43,21 @@ func main() {
 
 	fmt.Println("Server started at port 8080")
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-
-	go func() {
-		<-quit
-		fmt.Println("SERVER DOWN")
-	}()
-
 	select {}
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("ui/main_page.html")
-	t.Execute(w, nil)
+	user := getLoggedinUser(w)
+
+	if user == nil {
+		t, _ := template.ParseFiles("ui/login.html")
+		t.Execute(w, nil)
+	} else {
+		t, _ := template.ParseFiles("ui/menu.html")
+		t.Execute(w, models.User{
+			Message: "Please loging",
+		})
+	}
 }
 
 func singup(w http.ResponseWriter, r *http.Request) {
@@ -165,8 +145,15 @@ func menu(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		user := getLoggedinUser(w)
 
-		t, _ := template.ParseFiles("ui/menu.html")
-		t.Execute(w, user)
+		if user == nil {
+			t, _ := template.ParseFiles("ui/login.html")
+			t.Execute(w, nil)
+		} else {
+			t, _ := template.ParseFiles("ui/menu.html")
+			t.Execute(w, models.User{
+				Message: "Please loging",
+			})
+		}
 	case "POST":
 		//no actions
 	default:
@@ -186,6 +173,13 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		mines, _ := strconv.Atoi(r.FormValue("mines"))
 
 		user := getLoggedinUser(w)
+
+		if user == nil {
+			t, _ := template.ParseFiles("ui/login.html")
+			t.Execute(w, nil)
+			return
+		}
+
 		userVal := *user
 
 		game := &models.Game{
@@ -235,39 +229,8 @@ func loadPendingGame(w http.ResponseWriter, r *http.Request) {
 
 		t, _ := template.ParseFiles("ui/game.html")
 		t.Execute(w, game)
-	case "POST":
-		// rows, _ := strconv.Atoi(r.FormValue("rows"))
-		// columns, _ := strconv.Atoi(r.FormValue("columns"))
-		// mines, _ := strconv.Atoi(r.FormValue("mines"))
-
-		// user := getLoggedinUser(w)
-		// userVal := *user
-		// game := models.Game{
-		// 	UserId:       int64(userVal.UserId),
-		// 	TimeConsumed: 0,
-		// 	Status:       "Pending",
-		// 	Rows:         rows,
-		// 	Columns:      columns,
-		// 	Mines:        mines,
-		// }
-
-		// newSpots, err := g.CreateGame(&game)
-
-		// if err != nil {
-		// 	game.Message = err.Error()
-		// } else {
-		// 	game.Message = "Game Created Successfully "
-		// 	game.Spots = newSpots
-
-		// 	t, err := template.ParseFiles("ui/game.html")
-		// 	if err != nil {
-		// 		game.Message = err.Error()
-		// 	}
-
-		// 	t.Execute(w, game)
-		// }
 	default:
-		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
+		fmt.Fprintf(w, "Sorry, only GET methods are supported.")
 	}
 }
 
@@ -275,6 +238,9 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	g.Cache.Flush()
 
 	getLoggedinUser(w)
+
+	t, _ := template.ParseFiles("ui/login.html")
+	t.Execute(w, nil)
 }
 
 func getLoggedinUser(w http.ResponseWriter) *models.User {
@@ -285,11 +251,6 @@ func getLoggedinUser(w http.ResponseWriter) *models.User {
 
 		return &user
 	}
-
-	t, _ := template.ParseFiles("ui/login.html")
-	t.Execute(w, models.User{
-		Message: "Please loging",
-	})
 
 	return nil
 }
@@ -322,17 +283,33 @@ func openSpot(w http.ResponseWriter, r *http.Request) {
 
 					if err != nil {
 						game.Message = err.Error()
+
+						if game.Message == "Game Over!" {
+							game.Status = "Lost"
+							game.UpdateStatus(g.DbHandler)
+						}
+					}
+
+					spots, err = models.GetSpotsByGameId(g.DbHandler, game.GameId)
+
+					if err != nil {
+						game.Message = err.Error()
 					} else {
-						spots, err = models.GetSpotsByGameId(g.DbHandler, game.GameId)
+						game.Spots = spots
 
-						if err != nil {
-							game.Message = err.Error()
-						} else {
-							game.Spots = spots
+						allSpotsOpen := true
 
-							if err != nil {
-								game.Message = err.Error()
+						for _, spot := range spots {
+							if spot.Status == "Closed" {
+								allSpotsOpen = false
+								break
 							}
+						}
+
+						if allSpotsOpen {
+							game.Message = "Congratulations, game finished!"
+							game.Status = "Won"
+							game.UpdateStatus(g.DbHandler)
 						}
 					}
 				}

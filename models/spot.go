@@ -183,7 +183,15 @@ func (s *Spot) ProcessSpot(handler *dbhandler.DbHandler, rows, colums int, statu
 
 			for _, spot := range spots {
 				args := make([]interface{}, 0)
-				args = append(args, "Open")
+				status := "Open"
+
+				if spot.Status == "RedFlagged" {
+					status = "ROpen"
+				} else if spot.Status == "QuestionFlagged" {
+					status = "QOpen"
+				}
+
+				args = append(args, status)
 				args = append(args, spot.SpotId)
 
 				_, err := handler.Execute(dbhandler.UPDATE_SPOT_STATUS, args)
