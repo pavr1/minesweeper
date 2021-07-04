@@ -3,17 +3,33 @@
         <title>Game</title>
         <style>
             table, th, td {
-              border: 1px solid black;
             }
-            .tdSize{
+            td:hover {
+                background-color: #f5f5f5;
+                cursor: pointer;
+            }
+            .tdDefault{
                 width: 50px;
                 height: 50px;
+                text-align: center;
+            }
+            .outsetBorder{
+                border-style: outset;
+            }
+            .insetBorder{
+                border-style: inset;
+                background-color: gainsboro;
             }
             table.center {
-              margin-left: auto;
-              margin-right: auto;
+                margin-left: auto;
+                margin-right: auto;
             }
-            </style>
+        </style>
+        <script>
+            function view(spot){
+                window.location.href = "/openSpot?gameId="+1+"&spotId="+spot.id;
+            }
+        </script>
     </head>
     <body>
         <h2>{{.Message}}</h2>
@@ -23,15 +39,6 @@
         Mines {{.Mines}}
 
         <table>
-            <!-- <tr>
-                <td>SpotId</td>
-                <td>GameId</td>
-                <td>Value</td>
-                <td>X</td>
-                <td>Y</td>
-                <td>NearSpots</td>
-                <td>Status</td>
-            </tr> -->
             {{$currentX := "0"}}
             <tr>
             {{range $index, $page := .Spots}}
@@ -40,14 +47,22 @@
                 {{ $y := slice $c  2 3}}
 
                 {{if eq $x $currentX}}
-                    <td class="tdSize">{{.Value}}</td>
+                    {{if eq .Status "Closed"}}
+                        <td id="{{.SpotId}}" onclick="view(this)" class="tdDefault outsetBorder {{$x}},{{$y}}"></td>
+                    {{else}}
+                        <td id="{{.SpotId}}" onclick="view(this)" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
+                    {{end}}
                 {{else}}
                     {{$currentX = $x}}
                     </tr>
                     <tr>
-                        <td class="tdSize">{{.Value}}</td>
+                        {{if eq .Status "Closed"}}
+                            <td id="{{.SpotId}}" onclick="view(this)"" class="tdDefault outsetBorder {{$x}},{{$y}}"></td>
+                        {{else}}
+                            <td id="{{.SpotId}}" onclick="view(this)" class="tdDefault insetBorder {{$x}},{{$y}}">{{.Value}}</td>
+                        {{end}}
                 {{ end}}
-                XXX: {{$c}} - {{$x}},{{$y}}-{{.Value}}
+                <!-- XXX: {{$c}} - {{$x}},{{$y}}-{{.Value}} -->
             {{ end}}
             </tr>
         </table>

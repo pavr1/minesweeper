@@ -18,7 +18,7 @@ type Game struct {
 	Rows         int
 	Columns      int
 	Mines        int
-	Spots        *map[string]*Spot
+	Spots        map[string]Spot
 	Message      string
 }
 
@@ -86,8 +86,7 @@ func (g *Game) GenerateGrid() (*map[string]*Spot, error) {
 	for _, value := range spots {
 		wg.Add(1)
 		go func(spot *Spot, spots map[string]*Spot, wg *sync.WaitGroup) {
-			nearSpots := loadNearSpots(spot.X, spot.Y, rows, columns, spots)
-			spot.NearSpots = &nearSpots
+			spot.LoadNearSpots(rows, columns, spots)
 			spot.Value = spot.GetSpotNearMines()
 			wg.Done()
 		}(value, spots, &wg)
@@ -119,72 +118,6 @@ func (g *Game) setupMines(rows, coulmns, mines int, spots *map[string]*Spot) {
 			break
 		}
 	}
-}
-
-func loadNearSpots(x, y, rows, colums int, spots map[string]*Spot) map[string]*Spot {
-	nearSpots := make(map[string]*Spot)
-
-	var id string
-	auxX := x - 1
-	auxY := y - 1
-	if auxX >= 0 && auxY >= 0 {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	auxX = x
-	auxY = y - 1
-	if auxY >= 0 {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	auxX = x + 1
-	auxY = y - 1
-	if auxX < rows && auxY >= 0 {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	//---
-
-	auxX = x - 1
-	auxY = y
-	if auxX >= 0 {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	auxX = x + 1
-	auxY = y
-	if auxX < colums {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-	//--
-
-	auxX = x - 1
-	auxY = y + 1
-	if auxX >= 0 && auxY < rows {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	auxX = x
-	auxY = y + 1
-	if auxY < rows {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	auxX = x + 1
-	auxY = y + 1
-	if auxX < colums && auxY < rows {
-		id = strconv.Itoa(auxX) + "," + strconv.Itoa(auxY)
-		nearSpots[id] = spots[id]
-	}
-
-	return nearSpots
 }
 
 func GetPendingGames(handler *dbhandler.DbHandler, userId int64) ([]Game, error) {

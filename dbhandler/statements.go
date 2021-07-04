@@ -58,6 +58,16 @@ const SELECT_LATEST_GAME = `
 	WHERE UserId = @p1 ORDER BY CreatedDate DESC`
 
 const SELECT_SPOTS_BY_GAME_ID = `
-	SELECT TOP (1000) [SpotId],[GameId],[Value],[X],[Y],[NearSpots],[Status]
+	SELECT [SpotId],[GameId],[Value],[X],[Y],[NearSpots],[Status]
 		FROM [minesweeper].[dbo].[Spot] 
 	WHERE GameId = @p1`
+
+const SELECT_SPOT_BY_ID = `
+	SELECT [SpotId],[GameId],[Value],[X],[Y],[NearSpots],[Status]
+		FROM [minesweeper].[dbo].[Spot] 
+	WHERE SpotId = @p1`
+
+const UPDATE_SPOT_STATUS = `
+	UPDATE [minesweeper].[dbo].[Spot] 
+		SET Status = @p1
+	WHERE SpotId = @p2`

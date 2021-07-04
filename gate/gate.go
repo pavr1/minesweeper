@@ -145,15 +145,15 @@ func (g *Gate) GetSingleGame(gameId int64) (*models.Game, error) {
 		return nil, err
 	}
 
-	spots := make(map[string]*models.Spot)
+	spots := make(map[string]models.Spot)
 	spotListVal := *spotList
 	for i := range spotListVal {
 		spot := spotListVal[i]
 		id := strconv.Itoa(spot.X) + "," + strconv.Itoa(spot.Y)
 
-		spots[id] = &spot
+		spots[id] = spot
 	}
-	game.Spots = &spots
+	game.Spots = spots
 
 	return game, nil
 }

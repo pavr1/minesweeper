@@ -93,7 +93,7 @@ func (h *DbHandler) Execute(statement string, args []interface{}) (int64, error)
 	err = result.Scan(&id)
 
 	if err != nil {
-		return -1, err
+		return -1, nil
 	}
 
 	return id, err
