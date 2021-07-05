@@ -147,12 +147,22 @@ func menu(w http.ResponseWriter, r *http.Request) {
 
 		if user == nil {
 			t, _ := template.ParseFiles("ui/login.html")
-			t.Execute(w, nil)
-		} else {
-			t, _ := template.ParseFiles("ui/menu.html")
 			t.Execute(w, models.User{
 				Message: "Please loging",
 			})
+		} else {
+			pendingGames, err := models.GetPendingGames(g.DbHandler, user.UserId)
+
+			if err != nil {
+				user.Message = err.Error()
+			} else {
+				user.Message = "Welcome " + user.Name + "!"
+
+				user.PendingGames = pendingGames
+			}
+
+			t, _ := template.ParseFiles("ui/menu.html")
+			t.Execute(w, user)
 		}
 	case "POST":
 		//no actions
