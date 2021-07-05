@@ -50,13 +50,13 @@ func start(w http.ResponseWriter, r *http.Request) {
 	user := getLoggedinUser(w)
 
 	if user == nil {
-		t, _ := template.ParseFiles("ui/login.html")
-		t.Execute(w, nil)
-	} else {
-		t, _ := template.ParseFiles("ui/menu.html")
+		t, _ := template.ParseFiles("ui/main_page.html")
 		t.Execute(w, models.User{
 			Message: "Please loging",
 		})
+	} else {
+		t, _ := template.ParseFiles("ui/menu.html")
+		t.Execute(w, user)
 	}
 }
 
@@ -249,8 +249,13 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 	getLoggedinUser(w)
 
+	user := models.User{
+		Name:     "",
+		Password: "",
+	}
+
 	t, _ := template.ParseFiles("ui/login.html")
-	t.Execute(w, nil)
+	t.Execute(w, user)
 }
 
 func getLoggedinUser(w http.ResponseWriter) *models.User {
@@ -317,9 +322,11 @@ func openSpot(w http.ResponseWriter, r *http.Request) {
 						}
 
 						if allSpotsOpen {
-							game.Message = "Congratulations, game finished!"
-							game.Status = "Won"
-							game.UpdateStatus(g.DbHandler)
+							if game.Message != "Game Over!" {
+								game.Message = "Congratulations, game finished!"
+								game.Status = "Won"
+								game.UpdateStatus(g.DbHandler)
+							}
 						}
 					}
 				}
