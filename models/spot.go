@@ -17,7 +17,17 @@ type Spot struct {
 	Status    string
 }
 
-func (s *Spot) Insert(handler *dbhandler.DbHandler, tx *sql.Tx) error {
+type UISpot struct {
+	SpotId    int64
+	GameId    int64
+	Value     string
+	X         int
+	Y         int
+	NearSpots map[string]*UISpot
+	Status    string
+}
+
+func (s *Spot) Insert(tx *sql.Tx, handler *dbhandler.DbHandler) error {
 	args := make([]interface{}, 0)
 	args = append(args, s.GameId)
 	args = append(args, s.Value)
@@ -62,6 +72,44 @@ func GetSpotsByGameId(handler *dbhandler.DbHandler, gameId int64) (map[string]*S
 		id := strconv.Itoa(dbspot.X) + "," + strconv.Itoa(dbspot.Y)
 
 		spot := Spot{
+			SpotId:    dbspot.SpotId,
+			GameId:    dbspot.GameId,
+			Value:     dbspot.Value,
+			X:         dbspot.X,
+			Y:         dbspot.Y,
+			NearSpots: nearSpots,
+			Status:    dbspot.Status,
+		}
+
+		spotsMap[id] = &spot
+	}
+
+	return spotsMap, nil
+}
+
+func GetUISpotsByGameId(tx *sql.Tx, handler *dbhandler.DbHandler, gameId int64) (map[string]*UISpot, error) {
+	args := make([]interface{}, 0)
+	args = append(args, gameId)
+	var r []interface{}
+	var err error
+
+	if tx != nil {
+		r, err = handler.SelectTransaction(tx, dbhandler.SELECT_SPOTS_BY_GAME_ID, "Spot", args)
+	} else {
+		r, err = handler.Select(dbhandler.SELECT_SPOTS_BY_GAME_ID, "Spot", args)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	spotsMap := make(map[string]*UISpot)
+
+	for _, s := range r {
+		nearSpots := make(map[string]*UISpot)
+		dbspot := s.(dbhandler.DbSpot)
+		id := strconv.Itoa(dbspot.X) + "," + strconv.Itoa(dbspot.Y)
+
+		spot := UISpot{
 			SpotId:    dbspot.SpotId,
 			GameId:    dbspot.GameId,
 			Value:     dbspot.Value,

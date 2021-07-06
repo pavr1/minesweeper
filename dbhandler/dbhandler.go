@@ -250,7 +250,7 @@ func (h *DbHandler) Select(statement, structType string, args []interface{}) ([]
 	return result, nil
 }
 
-func (h *DbHandler) SelectTransaction(statement, structType string, args []interface{}, tx *sql.Tx) ([]interface{}, error) {
+func (h *DbHandler) SelectTransaction(tx *sql.Tx, statement, structType string, args []interface{}) ([]interface{}, error) {
 	ctx := context.Background()
 	var err error
 

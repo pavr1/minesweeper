@@ -19,7 +19,7 @@
             </tr>
             {{ range .PendingGames}}
                 <tr>
-                    <td><a href='/loadPendingGame?gameId={{.GameId}}'>{{ .CreatedDate }}</a></td>
+                    <td><a href='/loadGame?gameId={{.GameId}}'>{{ .CreatedDate }}</a></td>
                 </tr>
             {{ end}}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -30,14 +31,24 @@ func main() {
 		panic(err.Error)
 	}
 
+	// s := &http.Server{
+	// 	Addr:           ":8080",
+	// 	Handler:        nil,
+	// 	ReadTimeout:    10 * time.Second,
+	// 	WriteTimeout:   10 * time.Second,
+	// 	MaxHeaderBytes: 1 << 20,
+	// }
+
 	http.HandleFunc("/", start)
 	http.HandleFunc("/signup", singup)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/menu", menu)
 	http.HandleFunc("/creategame", createGame)
-	http.HandleFunc("/loadPendingGame", loadPendingGame)
-	http.HandleFunc("/openSpot", openSpot)
+	http.HandleFunc("/loadGame", loadGame)
+	http.HandleFunc("/processSpot", processSpot)
+
+	//log.Fatal(s.ListenAndServe())
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
@@ -47,16 +58,15 @@ func main() {
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
-	user := getLoggedinUser(w)
+	ui, err := getLoggedinUser(w)
 
-	if user == nil {
+	if err != nil {
+		ui.Message = err.Error()
 		t, _ := template.ParseFiles("ui/main_page.html")
-		t.Execute(w, models.User{
-			Message: "Please loging",
-		})
+		t.Execute(w, ui)
 	} else {
 		t, _ := template.ParseFiles("ui/menu.html")
-		t.Execute(w, user)
+		t.Execute(w, ui)
 	}
 }
 
@@ -71,23 +81,17 @@ func singup(w http.ResponseWriter, r *http.Request) {
 		lastName := r.FormValue("lastName")
 		password := r.FormValue("password")
 
-		user := models.User{
-			Name:     name,
-			LastName: lastName,
-			Password: password,
-		}
-
-		err := g.CreateUser(user)
+		ui, err := g.CreateUser(name, lastName, password)
 
 		if err != nil {
-			user.Message = err.Error()
+			ui.Message = err.Error()
 		} else {
-			user = models.User{}
-			user.Message = "User created successfully!"
+			ui = models.UIUser{}
+			ui.Message = "User created successfully!"
 		}
 
 		t, _ := template.ParseFiles("ui/login.html")
-		t.Execute(w, user)
+		t.Execute(w, ui)
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}
@@ -103,37 +107,18 @@ func login(w http.ResponseWriter, r *http.Request) {
 		name := r.FormValue("name")
 		password := r.FormValue("password")
 
-		user := models.User{
-			Name:     name,
-			Password: password,
-		}
-
-		resultUser, err := g.ValidateLogin(user)
+		ui, err := g.ValidateLogin(name, password)
 
 		if err != nil {
-			user.Message = err.Error()
+			ui.Message = err.Error()
 			t, _ := template.ParseFiles("ui/login.html")
-			t.Execute(w, user)
+			t.Execute(w, ui)
 		} else {
-			if resultUser != nil {
-				resultUser, err := user.ValidateUser(g.DbHandler)
+			ui.Message = "Hello " + ui.Name + "!"
+			g.Cache.Set("USER_SESSION", ui)
 
-				if err != nil {
-					g.Cache.Set("USER_SESSION", user)
-				}
-
-				user = *resultUser
-
-				g.Cache.Set("USER_SESSION", user)
-
-				user.Message = "Welcome " + user.Name + "!"
-				t, _ := template.ParseFiles("ui/menu.html")
-				t.Execute(w, user)
-			} else {
-				user.Message = "Invalid user or password!"
-				t, _ := template.ParseFiles("ui/login.html")
-				t.Execute(w, user)
-			}
+			t, _ := template.ParseFiles("ui/menu.html")
+			t.Execute(w, ui)
 		}
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
@@ -143,26 +128,15 @@ func login(w http.ResponseWriter, r *http.Request) {
 func menu(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		user := getLoggedinUser(w)
+		ui, err := getLoggedinUser(w)
 
-		if user == nil {
+		if err != nil {
+			ui.Message = err.Error()
 			t, _ := template.ParseFiles("ui/login.html")
-			t.Execute(w, models.User{
-				Message: "Please loging",
-			})
+			t.Execute(w, ui)
 		} else {
-			pendingGames, err := models.GetPendingGames(g.DbHandler, user.UserId)
-
-			if err != nil {
-				user.Message = err.Error()
-			} else {
-				user.Message = "Welcome " + user.Name + "!"
-
-				user.PendingGames = pendingGames
-			}
-
 			t, _ := template.ParseFiles("ui/menu.html")
-			t.Execute(w, user)
+			t.Execute(w, ui)
 		}
 	case "POST":
 		//no actions
@@ -182,52 +156,36 @@ func createGame(w http.ResponseWriter, r *http.Request) {
 		columns, _ := strconv.Atoi(r.FormValue("columns"))
 		mines, _ := strconv.Atoi(r.FormValue("mines"))
 
-		user := getLoggedinUser(w)
+		ui, err := getLoggedinUser(w)
 
-		if user == nil {
+		if err != nil {
+			ui.Message = err.Error()
 			t, _ := template.ParseFiles("ui/login.html")
 			t.Execute(w, nil)
 			return
 		}
 
-		userVal := *user
-
-		game := &models.Game{
-			UserId:       int64(*&userVal.UserId),
-			TimeConsumed: 0,
-			Status:       "Pending",
-			Rows:         rows,
-			Columns:      columns,
-			Mines:        mines,
-		}
-
-		newSpots, err := g.CreateGame(game)
-
+		ctx := context.Background()
+		uigame, err := g.CreateGame(ctx, ui.UserId, rows, columns, mines)
 		if err != nil {
-			game.Message = err.Error()
-			t, err := template.ParseFiles("ui/create_game.html")
-			if err != nil {
-				game.Message = err.Error()
-			}
-
-			t.Execute(w, game)
-		} else {
-			game.Message = "Game Created Successfully "
-			game.Spots = *newSpots
-
-			t, err := template.ParseFiles("ui/game.html")
-			if err != nil {
-				game.Message = err.Error()
-			}
-
-			t.Execute(w, game)
+			ui.Message = err.Error()
+			t, _ := template.ParseFiles("ui/create_game.html")
+			t.Execute(w, ui)
+			return
 		}
+
+		t, err := template.ParseFiles("ui/game.html")
+		if err != nil {
+			uigame.Message = err.Error()
+		}
+
+		t.Execute(w, uigame)
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}
 }
 
-func loadPendingGame(w http.ResponseWriter, r *http.Request) {
+func loadGame(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		gameId, _ := strconv.Atoi(r.FormValue("gameId"))
@@ -258,19 +216,19 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, user)
 }
 
-func getLoggedinUser(w http.ResponseWriter) *models.User {
+func getLoggedinUser(w http.ResponseWriter) (models.UIUser, error) {
 	obj, found := g.Cache.Get("USER_SESSION")
 
 	if found {
-		user := obj.(models.User)
+		user := obj.(models.UIUser)
 
-		return &user
+		return user, nil
 	}
 
-	return nil
+	return models.UIUser{}, fmt.Errorf("Session lost, please log back in!")
 }
 
-func openSpot(w http.ResponseWriter, r *http.Request) {
+func processSpot(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		gameId, _ := strconv.Atoi(r.FormValue("gameId"))
@@ -279,62 +237,14 @@ func openSpot(w http.ResponseWriter, r *http.Request) {
 
 		getLoggedinUser(w)
 
-		game, err := models.GetSingleGame(g.DbHandler, int64(gameId))
+		ui, err := g.ProcessSpot(int64(gameId), int64(spotId), status)
+
 		if err != nil {
-			game.Message = err.Error()
-		} else {
-			spots, err := models.GetSpotsByGameId(g.DbHandler, game.GameId)
-
-			if err != nil {
-				game.Message = err.Error()
-			} else {
-				game.Spots = spots
-				spot, err := models.GetSpotById(g.DbHandler, int64(spotId))
-
-				if err != nil {
-					game.Message = err.Error()
-				} else {
-					err = spot.ProcessSpot(g.DbHandler, game.Rows, game.Columns, status)
-
-					if err != nil {
-						game.Message = err.Error()
-
-						if game.Message == "Game Over!" {
-							game.Status = "Lost"
-							game.UpdateStatus(g.DbHandler)
-						}
-					}
-
-					spots, err = models.GetSpotsByGameId(g.DbHandler, game.GameId)
-
-					if err != nil {
-						game.Message = err.Error()
-					} else {
-						game.Spots = spots
-
-						allSpotsOpen := true
-
-						for _, spot := range spots {
-							if spot.Status == "Closed" {
-								allSpotsOpen = false
-								break
-							}
-						}
-
-						if allSpotsOpen {
-							if game.Message != "Game Over!" {
-								game.Message = "Congratulations, game finished!"
-								game.Status = "Won"
-								game.UpdateStatus(g.DbHandler)
-							}
-						}
-					}
-				}
-			}
+			ui.Message = err.Error()
 		}
 
 		t, _ := template.ParseFiles("ui/game.html")
-		t.Execute(w, game)
+		t.Execute(w, ui)
 	default:
 		fmt.Fprintf(w, "Sorry, only GET and POST methods are supported.")
 	}

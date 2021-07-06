@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"minesweeper/dbhandler"
 	"time"
 )
@@ -15,7 +16,17 @@ type User struct {
 	PendingGames []Game
 }
 
-func (u *User) CreateUser(handler *dbhandler.DbHandler) error {
+type UIUser struct {
+	UserId       int64
+	Name         string
+	LastName     string
+	Password     string
+	CreatedDate  time.Time
+	Message      string
+	PendingGames []UIGame
+}
+
+func (u *User) CreateUser(handler *dbhandler.DbHandler) (*UIUser, error) {
 	args := make([]interface{}, 0)
 	args = append(args, u.Name)
 	args = append(args, u.LastName)
@@ -24,13 +35,19 @@ func (u *User) CreateUser(handler *dbhandler.DbHandler) error {
 	_, err := handler.Execute(dbhandler.CREATE_USER, args)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	uiuser, err := u.ValidateUser(handler)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return uiuser, nil
 }
 
-func (u *User) ValidateUser(handler *dbhandler.DbHandler) (*User, error) {
+func (u *User) ValidateUser(handler *dbhandler.DbHandler) (*UIUser, error) {
 	args := make([]interface{}, 0)
 	args = append(args, u.Name)
 	args = append(args, u.Password)
@@ -41,17 +58,13 @@ func (u *User) ValidateUser(handler *dbhandler.DbHandler) (*User, error) {
 		return nil, err
 	}
 
-	if result == nil {
-		return nil, nil
-	}
-
-	if len(result) == 0 {
-		return nil, nil
+	if result == nil || len(result) == 0 {
+		return nil, fmt.Errorf("User or password invalid")
 	}
 
 	dbUser := result[0].(dbhandler.DbUser)
 
-	user := User{
+	user := UIUser{
 		UserId:      dbUser.UserId,
 		Name:        dbUser.Name,
 		LastName:    dbUser.LastName,
@@ -60,12 +73,25 @@ func (u *User) ValidateUser(handler *dbhandler.DbHandler) (*User, error) {
 	}
 
 	pendingGames, err := GetPendingGames(handler, user.UserId)
-
-	if result == nil {
-		return nil, nil
+	if err != nil {
+		return nil, err
 	}
 
-	user.PendingGames = pendingGames
+	uigames := make([]UIGame, len(pendingGames))
+	for i, game := range pendingGames {
+		uigames[i] = UIGame{
+			GameId:       game.GameId,
+			UserId:       game.UserId,
+			CreatedDate:  game.CreatedDate,
+			TimeConsumed: game.TimeConsumed,
+			Status:       game.Status,
+			Rows:         game.Rows,
+			Columns:      game.Columns,
+			Mines:        game.Mines,
+		}
+	}
+
+	user.PendingGames = uigames
 
 	return &user, nil
 }

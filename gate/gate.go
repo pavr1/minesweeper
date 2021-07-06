@@ -2,7 +2,6 @@ package gate
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"minesweeper/ccache"
 	"minesweeper/dbhandler"
@@ -25,99 +24,81 @@ func Start() (*Gate, error) {
 	return gate, nil
 }
 
-func (g *Gate) CreateUser(user models.User) error {
-	if user.Name == "" {
-		return fmt.Errorf("user name required")
+func (g *Gate) CreateUser(name, lastName, password string) (models.UIUser, error) {
+	if name == "" {
+		return models.UIUser{}, fmt.Errorf("user name required")
 	}
 
-	if user.LastName == "" {
-		return fmt.Errorf("user last name required")
+	if lastName == "" {
+		return models.UIUser{}, fmt.Errorf("user last name required")
 	}
 
-	if user.Password == "" {
-		return fmt.Errorf("password required")
+	if password == "" {
+		return models.UIUser{}, fmt.Errorf("password required")
 	}
 
-	err := user.CreateUser(g.DbHandler)
+	user := models.User{
+		Name:     name,
+		LastName: lastName,
+		Password: password,
+	}
+
+	ui, err := user.CreateUser(g.DbHandler)
 
 	if err != nil {
-		return err
+		return models.UIUser{}, err
 	}
 
-	return nil
+	return *ui, nil
 }
 
-func (g *Gate) ValidateLogin(user models.User) (*models.User, error) {
-	if user.Name == "" {
-		return nil, fmt.Errorf("user name required")
+func (g *Gate) ValidateLogin(name, password string) (models.UIUser, error) {
+	if name == "" {
+		return models.UIUser{}, fmt.Errorf("user name required")
 	}
 
-	if user.Password == "" {
-		return nil, fmt.Errorf("password required")
+	if password == "" {
+		return models.UIUser{}, fmt.Errorf("password required")
+	}
+
+	user := models.User{
+		Name:     name,
+		Password: password,
 	}
 
 	result, err := user.ValidateUser(g.DbHandler)
 
 	if err != nil {
-		return nil, err
+		return models.UIUser{}, err
 	}
 
-	return result, nil
+	return *result, nil
 }
 
-func (g *Gate) CreateGame(game *models.Game) (*map[string]*models.Spot, error) {
-	if game.UserId == 0 {
-		return nil, fmt.Errorf("user id required")
+func (g *Gate) CreateGame(ctx context.Context, userId int64, rows, columns, mines int) (models.UIGame, error) {
+	if userId == 0 {
+		return models.UIGame{}, fmt.Errorf("user id required")
 	}
 
-	gameId, err := game.Create(g.DbHandler)
+	game := &models.Game{
+		UserId:       userId,
+		TimeConsumed: 0,
+		Status:       "Pending",
+		Rows:         rows,
+		Columns:      columns,
+		Mines:        mines,
+	}
+
+	ui, err := game.Create(ctx, g.DbHandler)
 
 	if err != nil {
-		return nil, err
+		return models.UIGame{}, err
 	}
 
-	game.GameId = gameId
-	spots, err := game.GenerateGrid()
-
-	if err != nil {
-		return nil, err
-	}
-
-	ctx := context.Background()
-	conn, err := g.DbHandler.DB.Conn(ctx)
-	tx, err := conn.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = g.insertSpots(spots, tx)
-
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	tx.Commit()
-
-	return spots, nil
+	return *ui, nil
 }
 
-func (g *Gate) insertSpots(spots *map[string]*models.Spot, tx *sql.Tx) error {
-	for key, spot := range *spots {
-		err := spot.Insert(g.DbHandler, tx)
-
-		if err != nil {
-			return err
-		}
-
-		s := *spots
-		s[key] = spot
-	}
-
-	return nil
-}
-
-func (g *Gate) GetPendingGames(userId int64) ([]models.Game, error) {
+func (g *Gate) GetPendingGames(userId int64) ([]models.UIGame, error) {
 	games, err := models.GetPendingGames(g.DbHandler, userId)
 
 	if err != nil {
@@ -127,20 +108,67 @@ func (g *Gate) GetPendingGames(userId int64) ([]models.Game, error) {
 	return games, nil
 }
 
-func (g *Gate) GetSingleGame(gameId int64) (*models.Game, error) {
-	game, err := models.GetSingleGame(g.DbHandler, gameId)
+func (g *Gate) GetSingleGame(gameId int64) (models.UIGame, error) {
+	ui, err := models.GetSingleGame(g.DbHandler, gameId)
 
 	if err != nil {
-		return &models.Game{}, err
+		return models.UIGame{}, err
 	}
 
-	spotList, err := models.GetSpotsByGameId(g.DbHandler, gameId)
+	return *ui, nil
+}
 
+func (g *Gate) ProcessSpot(gameId, spotId int64, status string) (models.UIGame, error) {
+	ui, err := models.GetSingleGame(g.DbHandler, int64(gameId))
 	if err != nil {
-		return &models.Game{}, err
+		return models.UIGame{}, err
 	}
 
-	game.Spots = spotList
+	spot, err := models.GetSpotById(g.DbHandler, int64(spotId))
+	if err != nil {
+		return models.UIGame{}, err
+	}
 
-	return game, nil
+	err = spot.ProcessSpot(g.DbHandler, ui.Rows, ui.Columns, status)
+
+	game := models.Game{
+		GameId: ui.GameId,
+	}
+
+	gameOver := false
+	if err != nil {
+		ui.Message = err.Error()
+
+		if ui.Message == "Game Over!" {
+			gameOver = true
+			game.Status = "Lost"
+			game.UpdateStatus(g.DbHandler)
+		}
+	}
+
+	ui, err = models.GetSingleGame(g.DbHandler, ui.GameId)
+	if err != nil {
+		return models.UIGame{}, err
+	}
+
+	allSpotsOpen := true
+
+	for _, spot := range ui.Spots {
+		if spot.Status == "Closed" {
+			allSpotsOpen = false
+			break
+		}
+	}
+
+	if allSpotsOpen {
+		if !gameOver {
+			ui.Message = "Congratulations, game finished!"
+			game.Status = "Won"
+			game.UpdateStatus(g.DbHandler)
+		} else {
+			game.Message = "Game Over!"
+		}
+	}
+
+	return *ui, nil
 }
